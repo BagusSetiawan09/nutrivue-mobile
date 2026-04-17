@@ -7,10 +7,16 @@ import {
   KeyboardAvoidingView, 
   Platform,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; 
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Brankas penyimpanan lokal
+
+// Import API dan Komponen
+import api from '../../config/api'; 
+import CustomAlert from '../../components/CustomAlert';
 
 /**
  * Komponen utama untuk autentikasi masuk pengguna.
@@ -20,6 +26,80 @@ export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // State Manajemen untuk Custom Alert
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+    onConfirm: () => {},
+  });
+
+  const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
+
+  /**
+   * Fungsi inti untuk memproses Login ke Backend
+   */
+  const handleLogin = async () => {
+    // 1. Validasi Input Kosong
+    if (!email.trim() || !password.trim()) {
+      setAlertConfig({
+        visible: true,
+        title: 'Validasi Gagal',
+        message: 'Alamat Email dan Kata Sandi tidak boleh kosong.',
+        type: 'warning',
+        onConfirm: closeAlert,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    Keyboard.dismiss(); // Tutup keyboard saat loading
+
+    try {
+      // 2. Kirim data ke API Laravel
+      const response = await api.post('/login', {
+        email: email,
+        password: password
+      });
+
+      // 3. Jika Laravel bilang sukses
+      if (response.data.status === 'success') {
+        // SIMPAN TOKEN KE BRANKAS HP (Sangat Krusial)
+        await AsyncStorage.setItem('userToken', response.data.token);
+        // Opsional: Simpan data profil user jika nanti dibutuhkan di halaman profil
+        await AsyncStorage.setItem('userData', JSON.stringify(response.data.data));
+
+        // Tampilkan Alert Sukses
+        setAlertConfig({
+          visible: true,
+          title: 'Login Berhasil!',
+          message: 'Selamat datang kembali di Nourish.',
+          type: 'success',
+          onConfirm: () => {
+            closeAlert();
+            navigation.replace('Home'); 
+          },
+        });
+      }
+
+    } catch (error: any) {
+      // 4. Tangkap Error (Password salah, email tidak ada, dll)
+      const errorMessage = error.response?.data?.message || 'Terjadi kesalahan jaringan saat mencoba masuk.';
+      
+      setAlertConfig({
+        visible: true,
+        title: 'Login Gagal',
+        message: errorMessage,
+        type: 'error',
+        onConfirm: closeAlert,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -57,6 +137,7 @@ export default function LoginScreen({ navigation }: any) {
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
+                editable={!isLoading}
               />
             </View>
 
@@ -73,12 +154,14 @@ export default function LoginScreen({ navigation }: any) {
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  editable={!isLoading}
                 />
                 
                 {/* Toggle visibilitas untuk kenyamanan pengguna */}
                 <TouchableOpacity 
                   className="absolute right-4 p-1"
                   onPress={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
                 >
                   <Ionicons 
                     name={showPassword ? "eye-outline" : "eye-off-outline"} 
@@ -93,6 +176,7 @@ export default function LoginScreen({ navigation }: any) {
             <TouchableOpacity 
               className="mt-4 flex-row justify-end"
               onPress={() => navigation.navigate('ForgotPassword')}
+              disabled={isLoading}
             >
               <Text className="text-primary font-medium text-sm">
                 Lupa Kata Sandi?
@@ -103,11 +187,17 @@ export default function LoginScreen({ navigation }: any) {
           {/* Bagian Aksi Utama dan Registrasi */}
           <View className="mt-10">
             <TouchableOpacity 
-              className="bg-primary rounded-2xl py-4 shadow-sm items-center justify-center active:bg-sky-700"
+              onPress={handleLogin}
+              disabled={isLoading}
+              className={`${isLoading ? 'bg-sky-400' : 'bg-primary active:bg-sky-700'} rounded-2xl py-4 shadow-sm items-center justify-center`}
             >
-              <Text className="text-white font-bold text-lg">
-                Masuk
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text className="text-white font-bold text-lg">
+                  Masuk
+                </Text>
+              )}
             </TouchableOpacity>
 
             {/* Redirect ke alur pendaftaran pengguna baru */}
@@ -115,7 +205,7 @@ export default function LoginScreen({ navigation }: any) {
               <Text className="text-gray-500 text-base">
                 Belum punya akun?{' '}
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading}>
                 <Text className="text-primary font-bold text-base">
                   Daftar
                 </Text>
@@ -125,6 +215,17 @@ export default function LoginScreen({ navigation }: any) {
 
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
+
+      {/* Komponen Custom Alert - Ditempatkan di lapisan paling atas */}
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={closeAlert}
+        onConfirm={alertConfig.onConfirm}
+      />
+
     </SafeAreaView>
   );
 }

@@ -10,16 +10,22 @@ import {
   Modal,
   Animated,
   Easing,
-  Dimensions
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; 
+
+// Import konfigurasi API yang sudah terhubung dengan file .env
+import api from '../../config/api'; 
+// Import Komponen Custom Alert
+import CustomAlert from '../../components/CustomAlert';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /**
  * Komponen pendaftaran pengguna baru.
- * Menangani data identitas, kategori pengguna, dan validasi keamanan.
+ * Menangani data identitas, kategori pengguna, validasi keamanan, dan integrasi API.
  */
 export default function RegisterScreen({ navigation }: any) {
   // Manajemen State Input Identitas
@@ -36,6 +42,21 @@ export default function RegisterScreen({ navigation }: any) {
   // Manajemen State Email dan Validasi Cerdas
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+
+  // State untuk proses loading API
+  const [isLoading, setIsLoading] = useState(false);
+
+  // State Manajemen untuk Custom Alert
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+    onConfirm: () => {},
+  });
+
+  // Fungsi utilitas untuk menutup Custom Alert
+  const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
   /**
    * Menangani perubahan email dengan deteksi kesalahan pengetikan umum.
@@ -106,13 +127,68 @@ export default function RegisterScreen({ navigation }: any) {
     }
   };
 
-  // Validasi Logika Tombol Submit
-  const isPasswordMatch = password === confirmPassword && password.length >= 8;
-  const isFormValid = isPasswordMatch && email.length > 0 && emailError === '';
-
   const handleSaveDate = () => {
     setTanggalLahirLabel(`${selectedDay} ${selectedMonth} ${selectedYear}`);
     togglePicker(false); 
+  };
+
+  // Validasi Logika Tombol Submit
+  const isPasswordMatch = password === confirmPassword && password.length >= 8;
+  const isFormValid = isPasswordMatch && email.length > 0 && emailError === '' && kategori !== '' && tanggalLahirLabel !== '';
+
+  /**
+   * Fungsi untuk mengirim data pendaftaran ke API Laravel melalui Axios (api.ts)
+   */
+  const handleRegister = async () => {
+    setIsLoading(true); 
+    
+    try {
+      const payload = {
+        name: name,
+        email: email,
+        password: password,
+        kategori: kategori,
+        tempat_lahir: tempatLahir,
+        tanggal_lahir: tanggalLahirLabel,
+        alamat: alamat,
+        phone: phone,
+      };
+
+      // Tembak API POST ke /register secara bersih lewat Axios
+      const response = await api.post('/register', payload);
+
+      if (response.data.status === 'success') {
+        // Tampilkan Custom Alert Sukses
+        setAlertConfig({
+          visible: true,
+          title: 'Pendaftaran Berhasil!',
+          message: 'Akun Anda telah sukses dibuat! Silakan masuk untuk melanjutkan.',
+          type: 'success',
+          onConfirm: () => {
+            closeAlert();
+            navigation.navigate('Login');
+          },
+        });
+      }
+
+    } catch (error: any) {
+      // Tangkap dan bongkar error jaringan jika terjadi
+      console.log('=== ERROR JARINGAN ASLI ===');
+      console.log(error.toJSON ? error.toJSON() : error);
+      
+      const errorMessage = error.response?.data?.message || 'Terjadi kesalahan jaringan. Pastikan IP Laptop dan WiFi sudah benar.';
+      
+      // Tampilkan Custom Alert Gagal
+      setAlertConfig({
+        visible: true,
+        title: 'Pendaftaran Gagal',
+        message: errorMessage,
+        type: 'error',
+        onConfirm: closeAlert,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -220,8 +296,16 @@ export default function RegisterScreen({ navigation }: any) {
 
             {/* Aksi Final Pendaftaran */}
             <View className="mt-10 mb-10">
-              <TouchableOpacity disabled={!isFormValid} className={`${isFormValid ? 'bg-primary' : 'bg-gray-300'} rounded-2xl py-4 shadow-sm items-center justify-center`}>
-                <Text className="text-white font-bold text-lg">Buat Akun Sekarang</Text>
+              <TouchableOpacity 
+                disabled={!isFormValid || isLoading} 
+                onPress={handleRegister} 
+                className={`${isFormValid && !isLoading ? 'bg-primary' : 'bg-gray-300'} rounded-2xl py-4 shadow-sm items-center justify-center`}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text className="text-white font-bold text-lg">Buat Akun Sekarang</Text>
+                )}
               </TouchableOpacity>
               
               <View className="flex-row justify-center mt-6">
@@ -282,6 +366,16 @@ export default function RegisterScreen({ navigation }: any) {
           </Animated.View>
         </SafeAreaView>
       </Modal>
+
+      {/* Komponen Custom Alert - Ditempatkan di lapisan paling atas */}
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={closeAlert}
+        onConfirm={alertConfig.onConfirm}
+      />
 
     </SafeAreaView>
   );
