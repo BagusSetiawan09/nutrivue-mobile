@@ -1,7 +1,10 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, Animated } from 'react-native';
+import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+/**
+ * Definisi kontrak data untuk properti komponen peringatan kustom
+ */
 interface CustomAlertProps {
   visible: boolean;
   title: string;
@@ -12,6 +15,9 @@ interface CustomAlertProps {
   confirmText?: string;
 }
 
+/**
+ * Komponen dialog peringatan modular dengan dukungan berbagai skema visual
+ */
 export default function CustomAlert({ 
   visible, 
   title, 
@@ -22,7 +28,9 @@ export default function CustomAlert({
   confirmText = 'OK' 
 }: CustomAlertProps) {
   
-  // Menentukan warna dan ikon berdasarkan tipe Alert
+  /**
+   * Pemetaan konfigurasi visual berdasarkan kategori tipe peringatan
+   */
   const getAlertConfig = () => {
     switch (type) {
       case 'success':
@@ -39,18 +47,21 @@ export default function CustomAlert({
   const config = getAlertConfig();
 
   return (
+    /**
+     * Overlay modal transparan dengan efek transisi pudar pada latar belakang
+     */
     <Modal transparent visible={visible} animationType="fade">
       <View className="flex-1 justify-center items-center bg-black/50 px-6">
         
-        {/* Kotak Alert */}
+        {/* Struktur utama kontainer dialog peringatan */}
         <View className="bg-white rounded-3xl w-full max-w-sm p-6 items-center shadow-2xl">
           
-          {/* Lingkaran Ikon */}
+          {/* Visualisasi ikon sebagai indikator status peringatan */}
           <View className={`w-16 h-16 rounded-full items-center justify-center mb-4 ${config.bgColor}`}>
             <Ionicons name={config.icon as any} size={36} color={config.color} />
           </View>
 
-          {/* Teks Judul & Pesan */}
+          {/* Bagian konten teks yang mencakup judul dan deskripsi pesan */}
           <Text className="text-xl font-bold text-gray-900 text-center mb-2">
             {title}
           </Text>
@@ -58,7 +69,7 @@ export default function CustomAlert({
             {message}
           </Text>
 
-          {/* Tombol Aksi */}
+          {/* Area aksi pengguna untuk menutup atau mengonfirmasi dialog */}
           <View className="w-full flex-row justify-center space-x-3">
             <TouchableOpacity 
               onPress={() => {

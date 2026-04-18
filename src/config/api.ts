@@ -1,7 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://192.168.110.248:8000/api'; 
+/**
+ * Konfigurasi Dasar Layanan API
+ * Mengatur alamat server pusat dan standar header untuk pertukaran data json
+ */
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nutrivueapp.com/api'; 
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -11,20 +15,29 @@ const api = axios.create({
   },
 });
 
+/**
+ * Interseptor Permintaan Akses
+ * Menangani penyematan token otentikasi secara otomatis pada setiap permintaan api
+ */
 api.interceptors.request.use(
   async (config) => {
     try {
-      // Coba ambil token. Kalau error (karena Native Module null), abaikan saja.
+      /**
+       * Pengambilan token identitas dari penyimpanan lokal perangkat
+       * Digunakan untuk memvalidasi akses pengguna pada rute terproteksi
+       */
       const token = await AsyncStorage.getItem('userToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (e) {
-      console.log('AsyncStorage dilewati sementara untuk rute ini.');
+      // Penanganan jika penyimpanan lokal tidak dapat diakses sementara
+      console.warn('Kegagalan akses penyimpanan lokal sesi dilewati');
     }
     return config;
   },
   (error) => {
+    // Menangani kesalahan pada tingkat pengiriman permintaan
     return Promise.reject(error);
   }
 );
