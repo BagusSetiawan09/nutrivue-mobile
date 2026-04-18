@@ -186,8 +186,22 @@ export default function ProfileScreen({ navigation }: any) {
               />
             }
           />
-          <MenuRow icon="lock-closed-outline" title="Privasi Keamanan" subtitle="Perlindungan autentikasi biometrik" color="slate" />
-          <MenuRow icon="help-buoy-outline" title="Pusat Bantuan" subtitle="Informasi layanan kendala teknis" color="slate" isLast={true} />
+          <MenuRow 
+            icon="lock-closed-outline" 
+            title="Privasi Keamanan" 
+            subtitle="Perlindungan autentikasi biometrik" 
+            color="slate" 
+            onPress={() => navigation.navigate('Security')} 
+          />
+          
+          <MenuRow 
+            icon="help-buoy-outline" 
+            title="Pusat Bantuan" 
+            subtitle="Informasi layanan kendala teknis" 
+            color="slate" 
+            isLast={true} 
+            onPress={() => navigation.navigate('HelpCenter')} 
+          />
         </View>
 
         {/* Pemicu aksi keluar sesi */}
@@ -218,7 +232,7 @@ export default function ProfileScreen({ navigation }: any) {
 
             <Text className="text-2xl font-bold text-gray-900 mb-2 text-center">Akhiri Sesi</Text>
             <Text className="text-sm text-gray-500 text-center mb-8 leading-relaxed">
-              Anda perlu masuk kembali menggunakan alamat email untuk melihat jadwal distribusi gizi.
+              Anda perlu masuk kembali menggunakan alamat email untuk melihat jadwal distribusi gizi
             </Text>
 
             <View className="flex-row justify-between w-full space-x-3">

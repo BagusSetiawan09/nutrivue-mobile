@@ -1,0 +1,152 @@
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+
+/**
+ * Komponen antarmuka pengelolaan privasi dan keamanan akun pengguna
+ */
+export default function SecurityScreen({ navigation }: any) {
+  
+  /**
+   * Manajemen status lokal untuk preferensi keamanan biometrik dan privasi
+   */
+  const [biometricEnabled, setBiometricEnabled] = useState(true);
+  const [pinEnabled, setPinEnabled] = useState(false);
+  const [medicalVisibility, setMedicalVisibility] = useState(true);
+  const [locationTracking, setLocationTracking] = useState(false);
+
+  /**
+   * Subkomponen modular untuk menyajikan opsi konfigurasi berbasis sakelar
+   */
+  const ToggleRow = ({ icon, title, subtitle, color, value, onValueChange, isLast }: any) => (
+    <View className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
+      <View className={`w-10 h-10 rounded-xl items-center justify-center mr-4 bg-${color}-50`}>
+        <Ionicons name={icon} size={20} color={`#${color === 'sky' ? '0EA5E9' : color === 'rose' ? 'F43F5E' : color === 'emerald' ? '10B981' : color === 'amber' ? 'F59E0B' : '64748B'}`} />
+      </View>
+      <View className="flex-1 pr-4">
+        <Text className="text-gray-900 font-bold text-sm mb-0.5">{title}</Text>
+        <Text className="text-gray-400 text-[10px] leading-relaxed">{subtitle}</Text>
+      </View>
+      <Switch 
+        trackColor={{ false: "#E2E8F0", true: "#BAE6FD" }}
+        thumbColor={value ? "#0EA5E9" : "#F8FAFC"}
+        onValueChange={onValueChange}
+        value={value}
+      />
+    </View>
+  );
+
+  /**
+   * Subkomponen modular untuk menyajikan opsi navigasi atau aksi interaktif
+   */
+  const ActionRow = ({ icon, title, subtitle, color, isLast, onPress }: any) => (
+    <TouchableOpacity 
+      onPress={onPress}
+      activeOpacity={0.7}
+      className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}
+    >
+      <View className={`w-10 h-10 rounded-xl items-center justify-center mr-4 bg-${color}-50`}>
+        <Ionicons name={icon} size={20} color={`#${color === 'sky' ? '0EA5E9' : color === 'rose' ? 'F43F5E' : color === 'emerald' ? '10B981' : color === 'amber' ? 'F59E0B' : '64748B'}`} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-gray-900 font-bold text-sm mb-0.5">{title}</Text>
+        <Text className="text-gray-400 text-[10px] leading-relaxed">{subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView className="flex-1 bg-gray-50">
+      
+      {/* Bagian tajuk utama antarmuka navigasi */}
+      <View className="flex-row items-center mb-4 mt-4 px-6">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          className="mr-4 bg-white p-2 rounded-xl shadow-sm border border-gray-100 active:bg-gray-50"
+        >
+          <Ionicons name="chevron-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <View>
+          <Text className="text-2xl font-bold text-gray-900">Privasi Keamanan</Text>
+          <Text className="text-xs text-gray-500 mt-0.5">Kelola perlindungan data dan akses akun</Text>
+        </View>
+      </View>
+
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        className="flex-1 px-6 pt-2"
+        contentContainerStyle={{ paddingBottom: 40 }}
+        bounces={false}
+      >
+        
+        {/* Kartu informasi edukasi keamanan sistem tingkat tinggi */}
+        <View className="bg-emerald-50 p-5 rounded-2xl flex-row items-center border border-emerald-100 mb-8 shadow-sm">
+          <View className="bg-white w-12 h-12 rounded-full items-center justify-center shadow-sm mr-4">
+            <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-emerald-900 font-bold text-sm mb-1">Enkripsi Data Aktif</Text>
+            <Text className="text-emerald-700 text-xs leading-relaxed">
+              Seluruh informasi medis dan kredensial Anda dilindungi menggunakan standar enkripsi mutakhir
+            </Text>
+          </View>
+        </View>
+
+        {/* Kelompok kontrol autentikasi dan kredensial akses */}
+        <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Metode Akses</Text>
+        <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+          <ActionRow 
+            icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" 
+            onPress={() => {}} 
+          />
+          <ToggleRow 
+            icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" 
+            value={biometricEnabled} onValueChange={setBiometricEnabled}
+          />
+          <ToggleRow 
+            icon="keypad" title="Kunci Aplikasi PIN" subtitle="Minta PIN setiap membuka aplikasi" color="amber" 
+            value={pinEnabled} onValueChange={setPinEnabled} isLast={true}
+          />
+        </View>
+
+        {/* Kelompok kontrol visibilitas dan rekam jejak privasi */}
+        <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Kontrol Privasi</Text>
+        <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+          <ToggleRow 
+            icon="medical" title="Visibilitas Data Medis" subtitle="Izinkan mitra melihat pantangan alergi Anda" color="rose" 
+            value={medicalVisibility} onValueChange={setMedicalVisibility}
+          />
+          <ToggleRow 
+            icon="location" title="Pelacakan Lokasi Distribusi" subtitle="Simpan riwayat lokasi pengambilan gizi" color="sky" 
+            value={locationTracking} onValueChange={setLocationTracking} isLast={true}
+          />
+        </View>
+
+        {/* Manajemen sesi perangkat keras yang terhubung ke sistem */}
+        <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Perangkat Tertaut</Text>
+        <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-8">
+          <View className="flex-row items-center justify-between border-b border-gray-50 pb-4 mb-4">
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 bg-slate-50 rounded-xl items-center justify-center mr-3">
+                <Ionicons name="phone-portrait" size={20} color="#64748B" />
+              </View>
+              <View>
+                <Text className="text-gray-900 font-bold text-sm">Ponsel Pintar Pengguna</Text>
+                <Text className="text-emerald-500 font-bold text-[10px] mt-0.5">Sedang Digunakan Saat Ini</Text>
+              </View>
+            </View>
+            <Text className="text-gray-400 text-xs font-medium">Medan</Text>
+          </View>
+          
+          <TouchableOpacity className="flex-row items-center justify-center py-2 active:bg-gray-50 rounded-xl">
+            <Ionicons name="log-out-outline" size={18} color="#EF4444" style={{ marginRight: 6 }} />
+            <Text className="text-red-500 font-bold text-sm">Keluar dari Semua Perangkat</Text>
+          </TouchableOpacity>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

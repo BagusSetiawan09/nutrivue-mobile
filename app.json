@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "nourish-mobile",
-    "slug": "nourish-mobile",
+    "name": "NutriVue",
+    "slug": "nutrivue",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
