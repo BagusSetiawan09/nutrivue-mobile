@@ -24,7 +24,7 @@ import DigitalIdScreen from './src/screens/main/profile/DigitalIdScreen';
 import SecurityScreen from './src/screens/main/profile/SecurityScreen';
 import HelpCenterScreen from './src/screens/main/profile/HelpCenterScreen';
 
-import GlobalUpdater from './src/components/GlobalUpdater'; 
+import GlobalUpdater from './src/components/GlobalUpdater';
 
 /**
  * Konfigurasi penanganan notifikasi global saat aplikasi dalam status aktif
@@ -77,8 +77,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        
-        {/* ⚡ RADAR UPDATE: Ditempatkan di puncak tertinggi agar menutupi semua layar */}
+
         <GlobalUpdater />
 
         <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>

@@ -6,20 +6,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GlobalUpdater() {
-  // 1. Radar penerima status
   const { isUpdateAvailable, isUpdatePending } = useUpdates();
-  
   const [isDownloading, setIsDownloading] = useState(false);
   const slideAnim = useRef(new Animated.Value(-150)).current;
   const insets = useSafeAreaInsets();
 
   const shouldShowBanner = isUpdateAvailable || isUpdatePending;
 
-  // ⚡ 2. PEMICU MANUAL (INI YANG KEMARIN SAYA LUPA MASUKKAN!)
-  // Memaksa aplikasi mengecek server saat baru dibuka
+  // ⚡ PEMICU MANUAL: Paksa radar mengetuk pintu server saat aplikasi dibuka
   useEffect(() => {
     const triggerCheck = async () => {
-      if (__DEV__) return; // Jangan jalan di mode development
+      if (__DEV__) return; 
       try {
         await Updates.checkForUpdateAsync();
       } catch (error) {
@@ -29,7 +26,6 @@ export default function GlobalUpdater() {
     triggerCheck();
   }, []);
 
-  // 3. Animasi Banner Turun
   useEffect(() => {
     if (shouldShowBanner) {
       Animated.spring(slideAnim, {
@@ -41,7 +37,6 @@ export default function GlobalUpdater() {
     }
   }, [shouldShowBanner]);
 
-  // 4. Eksekusi Download & Restart
   const handleUpdate = async () => {
     setIsDownloading(true);
     try {
@@ -61,12 +56,7 @@ export default function GlobalUpdater() {
     <Animated.View 
       style={{ 
         transform: [{ translateY: slideAnim }],
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        elevation: 10,
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999, elevation: 10,
         paddingTop: insets.top + 10,
       }}
       className="px-4"
@@ -75,26 +65,17 @@ export default function GlobalUpdater() {
         <View className="w-12 h-12 bg-sky-500/20 rounded-full items-center justify-center mr-4">
           <Ionicons name="cloud-download" size={24} color="#0EA5E9" />
         </View>
-
         <View className="flex-1">
           <Text className="text-white font-bold text-base mb-1">Pembaruan Sistem</Text>
           <Text className="text-gray-400 text-[11px] leading-relaxed">
-            {isUpdatePending 
-              ? 'Pembaruan telah siap. Mulai ulang aplikasi sekarang.' 
-              : 'Versi terbaru tersedia. Wajib diperbarui untuk melanjutkan.'}
+            {isUpdatePending ? 'Pembaruan telah siap. Mulai ulang aplikasi sekarang.' : 'Versi terbaru tersedia. Wajib diperbarui untuk melanjutkan.'}
           </Text>
         </View>
-
         <TouchableOpacity 
-          onPress={handleUpdate}
-          disabled={isDownloading}
+          onPress={handleUpdate} disabled={isDownloading}
           className={`${isDownloading ? 'bg-sky-700' : 'bg-primary'} ml-3 px-4 py-3 rounded-xl items-center justify-center`}
         >
-          {isDownloading ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text className="text-white font-bold text-xs">Update</Text>
-          )}
+          {isDownloading ? <ActivityIndicator color="white" size="small" /> : <Text className="text-white font-bold text-xs">Update</Text>}
         </TouchableOpacity>
       </View>
     </Animated.View>
