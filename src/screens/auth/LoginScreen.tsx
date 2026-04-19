@@ -67,10 +67,9 @@ export default function LoginScreen({ navigation }: any) {
 
       // 3. Jika Laravel bilang sukses
       if (response.data.status === 'success') {
-        // SIMPAN TOKEN KE BRANKAS HP (Sangat Krusial)
         await AsyncStorage.setItem('userToken', response.data.token);
-        // Opsional: Simpan data profil user jika nanti dibutuhkan di halaman profil
-        await AsyncStorage.setItem('userData', JSON.stringify(response.data.data));
+        
+        await AsyncStorage.setItem('user', JSON.stringify(response.data.data));
 
         // Tampilkan Alert Sukses
         setAlertConfig({

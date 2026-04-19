@@ -3,42 +3,29 @@ import { View, Text, ScrollView, TouchableOpacity, Dimensions, Animated, Modal, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+// WAJIB IMPORT ASYNC STORAGE UNTUK MEMBACA DATA LOGIN
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
+
 import BottomNavbar from '../../components/BottomNavbar';
 import api from '../../config/api';
-
 import CustomAlert from '../../components/CustomAlert';
 import DailyTracker from '../../components/DailyTracker';
 
 const { width } = Dimensions.get('window');
 
-/**
- * Komponen utama beranda untuk penyajian informasi nutrisi dan akses pengambilan gizi
- */
 export default function HomeScreen({ navigation }: any) {
   
-  /**
-   * Status identitas pengguna dan informasi instansi terkait
-   */
-  const [userName, setUserName] = useState('Bagus Setiawan');
-  const [kategori, setKategori] = useState('Siswa');
-  const [lokasi, setLokasi] = useState('SMKS PAB 2 Helvetia');
+  const [userName, setUserName] = useState('Memuat...');
+  const [kategori, setKategori] = useState('...');
+  const [lokasi, setLokasi] = useState('...');
 
-  /**
-   * Manajemen modalitas dan data untuk fungsionalitas kode QR
-   */
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [qrData, setQrData] = useState('');
   const [isLoadingQr, setIsLoadingQr] = useState(false);
 
-  /**
-   * Representasi data nutrisi menu harian hasil sinkronisasi API
-   */
   const [nutrition, setNutrition] = useState({ kalori: 0, protein: 0, lemak: 0, namaMenu: 'Memuat...' });
   const [greeting, setGreeting] = useState('Selamat Datang,');
 
-  /**
-   * Konfigurasi dialog peringatan untuk penanganan galat sistem
-   */
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{
     type: 'success' | 'error' | 'warning' | 'info';
@@ -46,16 +33,11 @@ export default function HomeScreen({ navigation }: any) {
     message: string;
   }>({ type: 'warning', title: '', message: '' });
 
-  /**
-   * Konfigurasi animasi transformasi untuk kontrol visibilitas bilah navigasi
-   */
   const navTranslateY = useRef(new Animated.Value(0)).current;
   const lastOffsetY = useRef(0);
 
   useEffect(() => {
-    /**
-     * Logika penentuan sapaan kontekstual berdasarkan waktu operasional perangkat
-     */
+    // 1. Set Sapaan Waktu
     const currentHour = new Date().getHours();
     if (currentHour >= 4 && currentHour < 11) {
       setGreeting('Selamat Pagi,');
@@ -67,12 +49,43 @@ export default function HomeScreen({ navigation }: any) {
       setGreeting('Selamat Malam,');
     }
 
+    // 2. Tarik Data User dari Storage
+    fetchUserData();
+    
+    // 3. Tarik Data Menu dari API
     fetchTodayMenu();
   }, []);
 
-  /**
-   * Prosedur pengambilan metadata menu harian melalui layanan backend
-   */
+  const fetchUserData = async () => {
+    try {
+      // Ambil data user yang disimpan saat Login
+      const userDataString = await AsyncStorage.getItem('user');
+      
+      if (userDataString) {
+        const user = JSON.parse(userDataString);
+        
+        // 1. Set Nama (Ambil nama depan saja agar rapi di UI)
+        const firstName = user.name.split(' ')[0];
+        setUserName(firstName);
+
+        // 2. Set Kategori & Format Teks (contoh: "ibu_hamil" jadi "IBU HAMIL")
+        const formattedKategori = user.kategori ? user.kategori.replace('_', ' ').toUpperCase() : 'PENGGUNA';
+        setKategori(formattedKategori);
+
+        // 3. Set Lokasi Cerdas (Karena belum ada kolom instansi di DB)
+        if (user.kategori === 'siswa') {
+          setLokasi('SMKS PAB 2 HELVETIA');
+        } else if (user.kategori === 'ibu_hamil' || user.kategori === 'ibu_balita') {
+          setLokasi('POSYANDU MITRA');
+        } else {
+          setLokasi('FASKES TERDAFTAR');
+        }
+      }
+    } catch (error) {
+      console.log('Gagal mengambil data user dari storage:', error);
+    }
+  };
+
   const fetchTodayMenu = async () => {
     try {
       const response = await api.get('/meal/today-menu');
@@ -89,15 +102,9 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  /**
-   * Pemicu animasi spring untuk menampilkan dan menyembunyikan bilah navigasi
-   */
   const showNavbar = () => Animated.spring(navTranslateY, { toValue: 0, useNativeDriver: true, speed: 10, bounciness: 2 }).start();
   const hideNavbar = () => Animated.spring(navTranslateY, { toValue: 150, useNativeDriver: true, speed: 10, bounciness: 0 }).start();
 
-  /**
-   * Handler peristiwa gulir untuk mengatur ambang batas visibilitas komponen navigasi
-   */
   const handleScroll = (e: any) => {
     const currentOffsetY = e.nativeEvent.contentOffset.y;
     const direction = currentOffsetY > lastOffsetY.current ? 'down' : 'up';
@@ -106,9 +113,6 @@ export default function HomeScreen({ navigation }: any) {
     lastOffsetY.current = currentOffsetY;
   };
 
-  /**
-   * Prosedur asinkron untuk perolehan token validasi pengambilan makanan via kode QR
-   */
   const handleGenerateQR = async () => {
     setIsLoadingQr(true);
     try {
@@ -126,9 +130,6 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  /**
-   * Struktur data untuk representasi visual metrik analisis nutrisi
-   */
   const nutritionItems = [
     { label: 'Kalori', value: `${nutrition.kalori} kcal`, icon: 'flame' as const },
     { label: 'Protein', value: `${nutrition.protein} g`, icon: 'fitness' as const },
@@ -146,7 +147,6 @@ export default function HomeScreen({ navigation }: any) {
         onMomentumScrollEnd={showNavbar}
         scrollEventThrottle={16}
       >
-        {/* Kontainer informasi profil dan status notifikasi */}
         <View className="flex-row justify-between items-center mb-8 mt-6">
           <View>
             <Text className="text-gray-400 text-sm font-medium mb-1">{greeting}</Text>
@@ -155,7 +155,6 @@ export default function HomeScreen({ navigation }: any) {
               <Ionicons name="sunny" size={24} color="#F59E0B" />
             </View>
             
-            {/* Label kategorisasi pengguna dan lokasi institusi operasional */}
             <View className="bg-sky-100 self-start px-3 py-1.5 rounded-full mt-2 flex-row items-center">
               <Ionicons name="business" size={12} color="#0EA5E9" style={{ marginRight: 6 }} />
               <Text className="text-primary text-[10px] font-bold uppercase tracking-wider">
@@ -170,7 +169,6 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* Panel interaksi utama untuk akses pengambilan jatah gizi */}
         <View className="bg-primary p-6 rounded-2xl shadow-xl shadow-sky-200 mb-8 overflow-hidden">
           <View className="flex-row justify-between items-center">
             <View className="flex-1 pr-4">
@@ -195,10 +193,8 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* Komponen pelacakan status harian */}
         <DailyTracker />
 
-        {/* Panel representasi analisis kuantitatif nutrisi harian */}
         <View className="mb-8">
           <Text className="text-gray-900 text-lg font-bold mb-4 px-1">Analisis Nutrisi</Text>
           <View className="flex-row justify-between">
@@ -214,7 +210,6 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Informasi edukatif berbasis standar kebutuhan gizi institusional */}
         <View className="bg-sky-50 p-4 rounded-2xl flex-row items-center border border-sky-100 shadow-sm">
           <View className="bg-white w-12 h-12 rounded-full items-center justify-center shadow-sm mr-4">
             <Ionicons name="bulb" size={24} color="#0EA5E9" />
@@ -226,7 +221,6 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </ScrollView>
 
-      {/* Kontainer modalitas untuk penyajian kode QR pengambilan */}
       <Modal visible={qrModalVisible} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center items-center px-6">
           <View className="bg-white p-8 rounded-[32px] items-center w-full max-w-sm shadow-2xl">
@@ -250,7 +244,6 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </Modal>
 
-      {/* Komponen dialog peringatan sistem kustom */}
       <CustomAlert 
         visible={alertVisible}
         type={alertConfig.type}
@@ -260,7 +253,6 @@ export default function HomeScreen({ navigation }: any) {
         onClose={() => setAlertVisible(false)} 
       />
 
-      {/* Komponen navigasi bawah dengan kontrol animasi gulir otomatis */}
       <BottomNavbar activeTab="Home" navigation={navigation} translateY={navTranslateY} />
     </SafeAreaView>
   );
