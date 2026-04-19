@@ -5,7 +5,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Updates from 'expo-updates';
 import * as Notifications from 'expo-notifications';
 
 import ScanScreen from './src/screens/main/ScanScreen';
@@ -25,12 +24,10 @@ import DigitalIdScreen from './src/screens/main/profile/DigitalIdScreen';
 import SecurityScreen from './src/screens/main/profile/SecurityScreen';
 import HelpCenterScreen from './src/screens/main/profile/HelpCenterScreen';
 
-/** Impor komponen peringatan kustom sistem */
-import CustomAlert from './src/components/CustomAlert'; 
+import GlobalUpdater from './src/components/GlobalUpdater'; 
 
 /**
  * Konfigurasi penanganan notifikasi global saat aplikasi dalam status aktif
- * Parameter ini mencegah aplikasi menutup paksa saat menerima panggilan sistem
  */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -48,24 +45,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
 
-  /** Status manajemen untuk memicu dialog pembaruan sistem nirkabel */
-  const [updateAlertVisible, setUpdateAlertVisible] = useState(false);
-
   useEffect(() => {
-    /**
-     * Prosedur pengecekan pembaruan perangkat lunak secara otomatis
-     */
-    const checkForUpdates = async () => {
-      try {
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          setUpdateAlertVisible(true);
-        }
-      } catch (e) {
-        console.log('Pengecekan pembaruan dilewati saat mode pengembangan', e);
-      }
-    };
-
     /**
      * Prosedur validasi sesi pengguna untuk penentuan rute awal navigasi
      */
@@ -82,29 +62,10 @@ export default function App() {
       }
     };
 
-    if (!__DEV__) {
-      checkForUpdates();
-    }
-    
     checkLoginStatus();
   }, []);
 
-  /**
-   * Prosedur eksekusi pengunduhan pembaruan saat pengguna memberikan konfirmasi
-   */
-  const handleProcessUpdate = async () => {
-    setUpdateAlertVisible(false);
-    setIsLoading(true);
-    try {
-      await Updates.fetchUpdateAsync();
-      await Updates.reloadAsync();
-    } catch (e) {
-      console.log('Sistem gagal mengunduh pembaruan rilis', e);
-      setIsLoading(false);
-    }
-  };
-
-  /** Layar pemuatan awal saat sistem menginisialisasi status sesi dan pembaruan */
+  /** Layar pemuatan awal saat sistem menginisialisasi status sesi */
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
@@ -116,6 +77,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
+        
+        {/* ⚡ RADAR UPDATE: Ditempatkan di puncak tertinggi agar menutupi semua layar */}
+        <GlobalUpdater />
+
         <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
@@ -135,17 +100,6 @@ export default function App() {
           <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
         </Stack.Navigator>
       </NavigationContainer>
-
-      {/* Komponen peringatan kustom yang dirender pada tingkat hierarki tertinggi */}
-      <CustomAlert 
-        visible={updateAlertVisible}
-        type="info"
-        title="Pembaruan Sistem"
-        message="Versi terbaru NutriVue telah rilis Tekan tombol di bawah untuk memperbarui tanpa perlu instal ulang aplikasi"
-        confirmText="Perbarui Sekarang"
-        onClose={() => setUpdateAlertVisible(false)}
-        onConfirm={handleProcessUpdate}
-      />
 
       <StatusBar style="auto" />
     </SafeAreaProvider>
