@@ -1,25 +1,45 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Animated, Image, Modal, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native'; // ⚡ RADAR REFRESH HALAMAN
 import BottomNavbar from '../../components/BottomNavbar';
 
-/**
- * Komponen manajemen profil pusat untuk pengaturan akun dan preferensi aplikasi
- */
 export default function ProfileScreen({ navigation }: any) {
-  
-  /**
-   * Konfigurasi koordinasi animasi untuk kontrol visibilitas bar navigasi secara halus
-   */
   const navTranslateY = useRef(new Animated.Value(0)).current;
   const lastOffsetY = useRef(0);
   const isNavbarVisible = useRef(true);
 
-  /**
-   * Prosedur eksekusi animasi kemunculan komponen navigasi utama
-   */
+  // ⚡ STATE UNTUK MENYIMPAN DATA DINAMIS DARI LOKAL MEMORI
+  const [userData, setUserData] = useState({
+    name: 'Memuat Data...',
+    kategori: '...'
+  });
+
+  // ⚡ USE FOCUS EFFECT: Menarik data terbaru setiap kali halaman Profil dibuka
+  useFocusEffect(
+    useCallback(() => {
+      const loadUserData = async () => {
+        try {
+          const userString = await AsyncStorage.getItem('user');
+          if (userString) {
+            const user = JSON.parse(userString);
+            setUserData({
+              name: user.name || 'Pengguna NutriVue',
+              // Anda bisa menyesuaikan ini. Jika kategori Siswa, bisa ditambah nama sekolahnya.
+              kategori: user.kategori ? `${user.kategori} NutriVue` : 'Siswa SMKS PAB 2 Helvetia',
+            });
+          }
+        } catch (error) {
+          console.log('Gagal memuat data profil:', error);
+        }
+      };
+
+      loadUserData();
+    }, [])
+  );
+
   const showNavbar = () => {
     if (!isNavbarVisible.current) {
       Animated.timing(navTranslateY, { toValue: 0, duration: 250, useNativeDriver: true }).start();
@@ -27,9 +47,6 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-  /**
-   * Prosedur eksekusi animasi penyembunyian komponen navigasi utama
-   */
   const hideNavbar = () => {
     if (isNavbarVisible.current) {
       Animated.timing(navTranslateY, { toValue: 150, duration: 250, useNativeDriver: true }).start();
@@ -37,9 +54,6 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-  /**
-   * Logika deteksi pergerakan layar untuk menyesuaikan posisi navigasi
-   */
   const handleScroll = (e: any) => {
     const currentOffsetY = e.nativeEvent.contentOffset.y;
     const contentHeight = e.nativeEvent.contentSize.height;
@@ -55,28 +69,20 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-  /**
-   * Manajemen status lokal untuk kendali dialog konfirmasi dan preferensi notifikasi
-   */
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [pushNotification, setPushNotification] = useState(true);
 
-  /**
-   * Prosedur asinkron untuk terminasi sesi dan pembersihan kredensial pengguna
-   */
   const handleLogout = async () => {
     setLogoutModalVisible(false);
     try {
-      await AsyncStorage.removeItem('userToken'); 
+      await AsyncStorage.removeItem('auth_token'); // Pastikan ini sesuai dengan nama token login Anda
+      await AsyncStorage.removeItem('user'); 
       navigation.replace('Login'); 
     } catch (e) {
       console.log('Kegagalan terminasi sesi pengguna', e);
     }
   };
 
-  /**
-   * Subkomponen modular untuk merender daftar opsi konfigurasi
-   */
   const MenuRow = ({ icon, title, subtitle, color, isLast, rightElement, onPress }: any) => (
     <TouchableOpacity 
       onPress={onPress}
@@ -96,10 +102,8 @@ export default function ProfileScreen({ navigation }: any) {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      
-      {/* Bagian tajuk utama antarmuka profil */}
       <View className="px-6 pt-6 pb-2 flex-row justify-between items-center">
-        <Text className="text-2xl font-bold text-gray-900">Profil Saya</Text>
+        <Text className="text-2xl font-bold text-gray-900">Profil Komandan</Text>
         <TouchableOpacity className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
           <Ionicons name="scan" size={20} color="#0EA5E9" />
         </TouchableOpacity>
@@ -116,10 +120,11 @@ export default function ProfileScreen({ navigation }: any) {
         bounces={false}
         overScrollMode="never"
       >
-        
-        {/* Kartu identitas utama pengguna dengan indikator verifikasi */}
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 items-center mb-6 relative">
-          <TouchableOpacity className="absolute top-4 right-4 p-2">
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('PersonalInfo')}
+            className="absolute top-4 right-4 p-2"
+          >
             <Ionicons name="pencil" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
@@ -133,8 +138,9 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          <Text className="text-2xl font-bold text-gray-900 mb-1">Bagus Setiawan</Text>
-          <Text className="text-gray-500 text-sm font-medium mb-4">Siswa SMKS PAB 2 Helvetia</Text>
+          {/* ⚡ MENAMPILKAN NAMA DINAMIS */}
+          <Text className="text-2xl font-bold text-gray-900 mb-1">{userData.name}</Text>
+          <Text className="text-gray-500 text-sm font-medium mb-4">{userData.kategori}</Text>
           
           <View className="bg-primary/10 px-4 py-2 rounded-full flex-row items-center">
             <Ionicons name="shield-checkmark" size={14} color="#0EA5E9" style={{ marginRight: 6 }} />
@@ -142,7 +148,6 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Representasi ringkas metrik aktivitas pengguna */}
         <View className="flex-row justify-between mb-8">
           <View className="bg-white p-4 rounded-xl w-[48%] shadow-sm border border-gray-100 items-center">
             <View className="w-10 h-10 bg-amber-50 rounded-full items-center justify-center mb-2">
@@ -161,7 +166,6 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Kelompok menu konfigurasi identitas dan kesehatan */}
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Pengaturan Akun</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
           <MenuRow icon="person-outline" title="Informasi Pribadi" subtitle="Ubah parameter kontak pengguna" color="sky" onPress={() => navigation.navigate('PersonalInfo')} />
@@ -169,7 +173,6 @@ export default function ProfileScreen({ navigation }: any) {
           <MenuRow icon="card-outline" title="Kartu Identitas Digital" subtitle="Penyajian visual tiket gizi" color="amber" isLast={true} onPress={() => navigation.navigate('DigitalId')} />
         </View>
 
-        {/* Kelompok menu preferensi fungsionalitas aplikasi */}
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Preferensi Sistem</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-8">
           <MenuRow 
@@ -204,7 +207,6 @@ export default function ProfileScreen({ navigation }: any) {
           />
         </View>
 
-        {/* Pemicu aksi keluar sesi */}
         <TouchableOpacity 
           onPress={() => setLogoutModalVisible(true)}
           className="bg-white border border-red-100 p-5 rounded-xl shadow-sm flex-row items-center justify-center mb-8 active:bg-red-50"
@@ -218,10 +220,8 @@ export default function ProfileScreen({ navigation }: any) {
 
       </ScrollView>
 
-      {/* Integrasi navigasi utama dengan dukungan animasi */}
       <BottomNavbar activeTab="Profile" navigation={navigation} translateY={navTranslateY} />
 
-      {/* Dialog konfirmasi tindakan keluar sesi */}
       <Modal visible={logoutModalVisible} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center items-center px-6">
           <View className="bg-white p-8 rounded-2xl w-full max-w-sm shadow-2xl items-center">
