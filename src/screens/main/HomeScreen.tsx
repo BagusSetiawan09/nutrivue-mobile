@@ -40,13 +40,13 @@ export default function HomeScreen({ navigation }: any) {
     // 1. Set Sapaan Waktu
     const currentHour = new Date().getHours();
     if (currentHour >= 4 && currentHour < 11) {
-      setGreeting('Selamat Pagi,');
+      setGreeting('Halo Selamat Pagi,');
     } else if (currentHour >= 11 && currentHour < 15) {
-      setGreeting('Selamat Siang,');
+      setGreeting('Halo Selamat Siang,');
     } else if (currentHour >= 15 && currentHour < 18) {
-      setGreeting('Selamat Sore,');
+      setGreeting('Halo Selamat Sore,');
     } else {
-      setGreeting('Selamat Malam,');
+      setGreeting('Halo Selamat Malam,');
     }
 
     // 2. Tarik Data User dari Storage
