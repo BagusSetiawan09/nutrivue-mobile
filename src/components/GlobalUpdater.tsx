@@ -1,21 +1,35 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import * as Updates from 'expo-updates';
-import { useUpdates } from 'expo-updates'; // ⚡ INI RADAR PRODUCTION TERBARU EXPO
+import { useUpdates } from 'expo-updates'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GlobalUpdater() {
-  // Radar ini akan mendengarkan status update langsung dari mesin inti EAS di Production
+  // 1. Radar penerima status
   const { isUpdateAvailable, isUpdatePending } = useUpdates();
   
   const [isDownloading, setIsDownloading] = useState(false);
   const slideAnim = useRef(new Animated.Value(-150)).current;
   const insets = useSafeAreaInsets();
 
-  // Banner muncul jika: (1) Ada update baru di server, ATAU (2) Update sudah selesai di-download background tapi belum di-restart
   const shouldShowBanner = isUpdateAvailable || isUpdatePending;
 
+  // ⚡ 2. PEMICU MANUAL (INI YANG KEMARIN SAYA LUPA MASUKKAN!)
+  // Memaksa aplikasi mengecek server saat baru dibuka
+  useEffect(() => {
+    const triggerCheck = async () => {
+      if (__DEV__) return; // Jangan jalan di mode development
+      try {
+        await Updates.checkForUpdateAsync();
+      } catch (error) {
+        console.log('Radar gagal mengecek server:', error);
+      }
+    };
+    triggerCheck();
+  }, []);
+
+  // 3. Animasi Banner Turun
   useEffect(() => {
     if (shouldShowBanner) {
       Animated.spring(slideAnim, {
@@ -27,18 +41,16 @@ export default function GlobalUpdater() {
     }
   }, [shouldShowBanner]);
 
+  // 4. Eksekusi Download & Restart
   const handleUpdate = async () => {
     setIsDownloading(true);
     try {
-      // Jika update baru tersedia, paksa download
       if (isUpdateAvailable) {
         await Updates.fetchUpdateAsync();
       }
-      // Jika sudah terdownload (pending) atau baru siap di-download, reload aplikasinya!
       await Updates.reloadAsync();
     } catch (error) {
       setIsDownloading(false);
-      console.log('Gagal memperbarui:', error);
       alert('Gagal mengunduh pembaruan. Pastikan internet Anda stabil.');
     }
   };
