@@ -1,44 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlert from '../../../components/CustomAlert';
+import api from '../../../config/api';
 
 /**
- * Komponen manajemen profil pengguna untuk pembaruan data identitas dan kontak
+ * Komponen manajemen profil pengguna terintegrasi API
  */
 export default function PersonalInfoScreen({ navigation }: any) {
   
-  /**
-   * Inisialisasi state formulir dengan data pengguna yang tersimpan
-   */
-  const [name, setName] = useState('Bagus Setiawan');
-  const [email, setEmail] = useState('bagus.setiawan@email.com');
-  const [phone, setPhone] = useState('+62 812-3456-7890');
-  const [address, setAddress] = useState('Jl. Kapten Sumarsono, Helvetia');
-  const [birthDate, setBirthDate] = useState('14 Agustus 2005');
+  // ⚡ State untuk Data Dinamis
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   
+  const [isScreenLoading, setIsScreenLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ type: 'success', title: '', message: '' });
 
-  /**
-   * Prosedur pengiriman data formulir ke layanan sinkronisasi backend
-   */
-  const handleSaveChanges = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setAlertVisible(true);
-    }, 1500);
+  // ⚡ AMBIL DATA ASLI SAAT HALAMAN DIBUKA
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
+
+  const fetchProfileData = async () => {
+    try {
+      // Ambil data user yang tersimpan saat login
+      const userDataString = await AsyncStorage.getItem('user');
+      if (userDataString) {
+        const user = JSON.parse(userDataString);
+        setName(user.name || '');
+        setEmail(user.email || '');
+        setPhone(user.phone || ''); // Opsional: pastikan kolom ini ada di backend nanti
+        setAddress(user.alamat || ''); 
+        setBirthDate(user.tempat_lahir || ''); // Disuaikan dengan kolom database Anda
+      }
+    } catch (error) {
+      console.log('Gagal menarik data profil lokal', error);
+    } finally {
+      setIsScreenLoading(false);
+    }
   };
 
   /**
-   * Komponen internal untuk standardisasi elemen input teks dalam formulir
+   * Prosedur pengiriman data ke Laravel Backend & update lokal
    */
+  const handleSaveChanges = async () => {
+    if (!name || !email) {
+      setAlertConfig({ type: 'error', title: 'Validasi Gagal', message: 'Nama dan Email tidak boleh kosong!' });
+      setAlertVisible(true);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // ⚡ 1. Kirim data pembaruan ke API Laravel
+      const payload = { 
+        name, 
+        email, 
+        phone, 
+        alamat: address, 
+        tempat_lahir: birthDate 
+      };
+      
+      // Buka komentar di bawah jika endpoint /profile/update sudah siap di Laravel
+      const response = await api.post('/profile/update', payload);
+
+      // ⚡ 2. Update data di AsyncStorage agar perubahan langsung terasa di aplikasi
+      const userDataString = await AsyncStorage.getItem('user');
+      if (userDataString) {
+        let user = JSON.parse(userDataString);
+        user = { ...user, ...payload }; 
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+      }
+
+      // Simulasi delay (Hapus jika API backend sudah aktif)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setAlertConfig({ 
+        type: 'success', 
+        title: 'Pembaruan Berhasil', 
+        message: 'Informasi pribadi Anda telah berhasil diperbarui dan disinkronkan ke sistem.' 
+      });
+      setAlertVisible(true);
+
+    } catch (error) {
+      console.log('Kegagalan sinkronisasi profil', error);
+      setAlertConfig({ type: 'error', title: 'Sistem Sibuk', message: 'Gagal menghubungi server. Periksa koneksi Anda.' });
+      setAlertVisible(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const InputField = ({ label, value, onChangeText, icon, keyboardType = 'default', isLast = false, editable = true }: any) => (
     <View className={`py-3 ${!isLast ? 'border-b border-gray-50' : ''}`}>
       <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">{label}</Text>
-      <View className="flex-row items-center bg-gray-50/50 rounded-xl px-4 py-3 border border-gray-100">
+      <View className={`flex-row items-center rounded-xl px-4 py-3 border ${editable ? 'bg-gray-50/50 border-gray-100' : 'bg-gray-100/50 border-gray-50'}`}>
         <Ionicons name={icon} size={18} color="#9CA3AF" style={{ marginRight: 10 }} />
         <TextInput
           value={value}
@@ -52,15 +115,21 @@ export default function PersonalInfoScreen({ navigation }: any) {
     </View>
   );
 
+  if (isScreenLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <ActivityIndicator size="large" color="#0EA5E9" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       
-      {/* Penanganan tata letak agar input tetap terlihat saat keyboard aktif */}
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        {/* Kontrol navigasi kembali dan judul modul informasi */}
         <View className="flex-row items-center mb-2 mt-4 px-6">
           <TouchableOpacity 
             onPress={() => navigation.goBack()} 
@@ -81,7 +150,6 @@ export default function PersonalInfoScreen({ navigation }: any) {
           bounces={false}
         >
           
-          {/* Visualisasi foto profil dengan opsi interaksi pembaruan citra */}
           <View className="items-center mb-8">
             <View className="relative shadow-sm">
               <Image 
@@ -94,7 +162,6 @@ export default function PersonalInfoScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* Pengelompokan field untuk informasi identitas dan kontak utama */}
           <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Data Utama</Text>
           <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
             <InputField label="Nama Lengkap" value={name} onChangeText={setName} icon="person-outline" />
@@ -102,14 +169,12 @@ export default function PersonalInfoScreen({ navigation }: any) {
             <InputField label="Nomor Telepon" value={phone} onChangeText={setPhone} icon="call-outline" keyboardType="phone-pad" isLast={true} />
           </View>
 
-          {/* Pengelompokan field untuk informasi demografis dan lokasi */}
           <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Detail Demografi</Text>
           <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
-            <InputField label="Tanggal Lahir" value={birthDate} onChangeText={setBirthDate} icon="calendar-outline" />
+            <InputField label="Tempat Lahir" value={birthDate} onChangeText={setBirthDate} icon="calendar-outline" />
             <InputField label="Alamat Domisili" value={address} onChangeText={setAddress} icon="location-outline" isLast={true} />
           </View>
 
-          {/* Kontrol pengelolaan parameter keamanan akun */}
           <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Keamanan</Text>
           <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-8">
             <View className="flex-row items-center justify-between">
@@ -119,7 +184,7 @@ export default function PersonalInfoScreen({ navigation }: any) {
                 </View>
                 <View>
                   <Text className="text-sm font-bold text-gray-900">Kata Sandi</Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">Diperbarui 3 bulan lalu</Text>
+                  <Text className="text-xs text-gray-500 mt-0.5">Diperbarui saat registrasi</Text>
                 </View>
               </View>
               <TouchableOpacity className="bg-gray-100 px-4 py-2 rounded-lg">
@@ -128,7 +193,6 @@ export default function PersonalInfoScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* Pemicu aksi penyimpanan data secara global */}
           <TouchableOpacity 
             onPress={handleSaveChanges}
             disabled={isLoading}
@@ -144,17 +208,18 @@ export default function PersonalInfoScreen({ navigation }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Komponen dialog pemberitahuan keberhasilan sinkronisasi profil */}
       <CustomAlert 
         visible={alertVisible}
-        type="success"
-        title="Pembaruan Berhasil"
-        message="Informasi pribadi Anda telah berhasil diperbarui dan disinkronkan ke sistem."
-        confirmText="Selesai"
+        type={alertConfig.type as any}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        confirmText={alertConfig.type === 'error' ? "Coba Lagi" : "Selesai"}
         onClose={() => setAlertVisible(false)}
         onConfirm={() => {
           setAlertVisible(false);
-          navigation.goBack();
+          if (alertConfig.type === 'success') {
+            navigation.goBack();
+          }
         }}
       />
 
