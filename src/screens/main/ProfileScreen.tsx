@@ -103,7 +103,7 @@ export default function ProfileScreen({ navigation }: any) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="px-6 pt-6 pb-2 flex-row justify-between items-center">
-        <Text className="text-2xl font-bold text-gray-900">Profil Komandan</Text>
+        <Text className="text-2xl font-bold text-gray-900">Profil Saya</Text>
         <TouchableOpacity className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
           <Ionicons name="scan" size={20} color="#0EA5E9" />
         </TouchableOpacity>
