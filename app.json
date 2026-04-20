@@ -23,7 +23,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "usesCleartextTraffic": true,
-      "package": "com.bagussetiawan.nourishmobile"
+      "package": "com.bagussetiawan.nutrivuehmobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
