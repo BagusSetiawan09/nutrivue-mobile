@@ -1,56 +1,58 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import * as Updates from 'expo-updates';
-import { useUpdates } from 'expo-updates'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GlobalUpdater() {
-  const { isUpdateAvailable, isUpdatePending } = useUpdates();
+  const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const slideAnim = useRef(new Animated.Value(-150)).current;
   const insets = useSafeAreaInsets();
 
-  const shouldShowBanner = isUpdateAvailable || isUpdatePending;
-
-  // ⚡ PEMICU MANUAL: Paksa radar mengetuk pintu server saat aplikasi dibuka
   useEffect(() => {
-    const triggerCheck = async () => {
-      if (__DEV__) return; 
-      try {
-        await Updates.checkForUpdateAsync();
-      } catch (error) {
-        console.log('Radar gagal mengecek server:', error);
-      }
-    };
-    triggerCheck();
+    // ⚡ PROTEKSI SDK 54: Jangan jalankan radar jika sedang di Expo Go / Mode Dev
+    // Radar HANYA akan menyala saat aplikasi sudah jadi APK
+    if (!__DEV__) {
+      checkUpdate();
+    }
   }, []);
 
-  useEffect(() => {
-    if (shouldShowBanner) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 8,
-        speed: 12
-      }).start();
+  const checkUpdate = async () => {
+    try {
+      // 1. Ketuk pintu server EAS
+      const update = await Updates.checkForUpdateAsync();
+      
+      // 2. Jika ada versi baru, munculkan banner
+      if (update.isAvailable) {
+        setIsUpdateAvailable(true);
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 8,
+          speed: 12
+        }).start();
+      }
+    } catch (error) {
+      console.log('Radar gagal terhubung ke server:', error);
     }
-  }, [shouldShowBanner]);
+  };
 
   const handleUpdate = async () => {
     setIsDownloading(true);
     try {
-      if (isUpdateAvailable) {
-        await Updates.fetchUpdateAsync();
-      }
-      await Updates.reloadAsync();
+      // 3. Tarik file update dari server
+      await Updates.fetchUpdateAsync();
+      // 4. Restart aplikasi untuk menerapkan perubahan
+      await Updates.reloadAsync(); 
     } catch (error) {
       setIsDownloading(false);
       alert('Gagal mengunduh pembaruan. Pastikan internet Anda stabil.');
     }
   };
 
-  if (!shouldShowBanner) return null;
+  // Sembunyikan banner jika tidak ada update
+  if (!isUpdateAvailable) return null;
 
   return (
     <Animated.View 
@@ -68,7 +70,7 @@ export default function GlobalUpdater() {
         <View className="flex-1">
           <Text className="text-white font-bold text-base mb-1">Pembaruan Sistem</Text>
           <Text className="text-gray-400 text-[11px] leading-relaxed">
-            {isUpdatePending ? 'Pembaruan telah siap. Mulai ulang aplikasi sekarang.' : 'Versi terbaru tersedia. Wajib diperbarui untuk melanjutkan.'}
+            Versi terbaru NutriVue tersedia. Wajib diperbarui agar sistem berjalan sinkron.
           </Text>
         </View>
         <TouchableOpacity 

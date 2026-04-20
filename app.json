@@ -38,9 +38,7 @@
     },
 
     "updates": {
-      "url": "https://u.expo.dev/a7312457-6c82-4f86-b235-2373570acb8d",
-      "checkAutomatically": "ON_ERROR_RECOVERY",
-      "fallbackToCacheTimeout": 0
+      "url": "https://u.expo.dev/a7312457-6c82-4f86-b235-2373570acb8d"
     },
     
     "owner": "bagussetiawan"

@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import * as Notifications from 'expo-notifications';
 
 import ScanScreen from './src/screens/main/ScanScreen';
@@ -26,18 +27,17 @@ import HelpCenterScreen from './src/screens/main/profile/HelpCenterScreen';
 
 import GlobalUpdater from './src/components/GlobalUpdater';
 
-/**
- * Konfigurasi penanganan notifikasi global saat aplikasi dalam status aktif
- */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (!__DEV__) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 const Stack = createNativeStackNavigator();
 
@@ -46,9 +46,6 @@ export default function App() {
   const [initialRoute, setInitialRoute] = useState('Login');
 
   useEffect(() => {
-    /**
-     * Prosedur validasi sesi pengguna untuk penentuan rute awal navigasi
-     */
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
@@ -65,7 +62,6 @@ export default function App() {
     checkLoginStatus();
   }, []);
 
-  /** Layar pemuatan awal saat sistem menginisialisasi status sesi */
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
@@ -77,9 +73,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-
         <GlobalUpdater />
-
         <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
@@ -89,8 +83,6 @@ export default function App() {
           <Stack.Screen name="Menu" component={MenuScreen} />
           <Stack.Screen name="History" component={HistoryScreen} />
           <Stack.Screen name="Statistik" component={StatistikScreen} />
-
-          {/* Rute navigasi kelompok profil pengguna */}
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
           <Stack.Screen name="HealthData" component={HealthDataScreen} />
@@ -99,7 +91,6 @@ export default function App() {
           <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
         </Stack.Navigator>
       </NavigationContainer>
-
       <StatusBar style="auto" />
     </SafeAreaProvider>
   );
