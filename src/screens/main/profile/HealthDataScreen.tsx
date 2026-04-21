@@ -103,7 +103,7 @@ export default function HealthDataScreen({ navigation }: any) {
         tinggi_badan: height !== '' ? parseFloat(height) : null,
         golongan_darah: bloodType !== '' ? bloodType : null,
         catatan_medis: medicalNotes !== '' ? medicalNotes : null,
-        alergi: JSON.stringify(allergies) 
+        alergi: allergies
       };
 
       const response = await api.post('/profile/health', payload);
