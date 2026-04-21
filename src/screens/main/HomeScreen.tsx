@@ -3,7 +3,6 @@ import { View, Text, ScrollView, TouchableOpacity, Dimensions, Animated, Modal, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
-// WAJIB IMPORT ASYNC STORAGE UNTUK MEMBACA DATA LOGIN
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 
 import BottomNavbar from '../../components/BottomNavbar';
@@ -40,13 +39,13 @@ export default function HomeScreen({ navigation }: any) {
     // 1. Set Sapaan Waktu
     const currentHour = new Date().getHours();
     if (currentHour >= 4 && currentHour < 11) {
-      setGreeting('Halo Selamat Pagi,');
+      setGreeting('Selamat Pagi,');
     } else if (currentHour >= 11 && currentHour < 15) {
-      setGreeting('Halo Selamat Siang,');
+      setGreeting('Selamat Siang,');
     } else if (currentHour >= 15 && currentHour < 18) {
-      setGreeting('Halo Selamat Sore,');
+      setGreeting('Selamat Sore,');
     } else {
-      setGreeting('Halo Selamat Malam,');
+      setGreeting('Selamat Malam,');
     }
 
     // 2. Tarik Data User dari Storage

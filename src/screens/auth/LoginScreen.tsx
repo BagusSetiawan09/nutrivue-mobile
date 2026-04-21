@@ -130,7 +130,7 @@ export default function LoginScreen({ navigation }: any) {
               </Text>
               <TextInput
                 className="bg-white border border-gray-100 rounded-2xl px-5 py-4 text-base text-gray-900 shadow-sm"
-                placeholder="contoh@email.com"
+                placeholder="Masukkan alamat email"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="email-address"
                 autoCapitalize="none"
