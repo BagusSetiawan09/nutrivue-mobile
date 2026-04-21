@@ -1,32 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomAlert from '../../../components/CustomAlert';
 
-/**
- * Komponen manajemen data kesehatan untuk personalisasi nutrisi dan keamanan medis
- */
+// ⚡ IMPORT API CONFIG ANDA
+import api from '../../../config/api'; 
+
 export default function HealthDataScreen({ navigation }: any) {
   
-  /**
-   * Status data kesehatan dasar meliputi golongan darah dan antropometri
-   */
-  const [bloodType, setBloodType] = useState('O+');
-  const [weight, setWeight] = useState('65');
-  const [height, setHeight] = useState('172');
-  const [medicalNotes, setMedicalNotes] = useState('Intoleransi Laktosa ringan. Hindari susu sapi berlebih.');
+  // ⚡ STATE UNTUK DATA REAL
+  const [bloodType, setBloodType] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [medicalNotes, setMedicalNotes] = useState('');
+  const [allergies, setAllergies] = useState<string[]>([]);
   
-  /**
-   * Daftar alergi makanan yang disimpan dalam format array untuk representasi tag
-   */
-  const [allergies, setAllergies] = useState(['Kacang Tanah', 'Udang laut']);
+  // State untuk input alergi baru
+  const [newAllergy, setNewAllergy] = useState('');
 
-  const [isLoading, setIsLoading] = useState(false);
+  // State Indikator
+  const [isFetching, setIsFetching] = useState(true); // Loading awal saat buka halaman
+  const [isLoading, setIsLoading] = useState(false);  // Loading saat tombol simpan ditekan
   const [alertVisible, setAlertVisible] = useState(false);
 
+  // ⚡ JALANKAN SAAT HALAMAN PERTAMA KALI DIBUKA
+  useEffect(() => {
+    fetchHealthData();
+  }, []);
+
   /**
-   * Logika kalkulasi indeks massa tubuh berdasarkan metrik berat dan tinggi badan
+   * Menarik data kesehatan dari Database (Laravel API)
+   */
+  const fetchHealthData = async () => {
+    try {
+      setIsFetching(true);
+      // Sesuaikan URL endpoint ini dengan route API Laravel Anda
+      const response = await api.get('/profile/health'); 
+      
+      if (response.data.status === 'success') {
+        const data = response.data.data;
+        setWeight(data.berat_badan?.toString() || '');
+        setHeight(data.tinggi_badan?.toString() || '');
+        setBloodType(data.golongan_darah || '');
+        setMedicalNotes(data.catatan_medis || '');
+        
+        // Parsing data alergi (Jika dari backend berupa JSON string)
+        if (data.alergi) {
+          try {
+            const parsedAlergi = typeof data.alergi === 'string' ? JSON.parse(data.alergi) : data.alergi;
+            setAllergies(Array.isArray(parsedAlergi) ? parsedAlergi : []);
+          } catch (e) {
+            setAllergies([]);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('[API Health] Gagal menarik data:', error);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  /**
+   * Logika kalkulasi Body Mass Index (BMI)
    */
   const calculateBMI = () => {
     const w = parseFloat(weight);
@@ -36,19 +73,51 @@ export default function HealthDataScreen({ navigation }: any) {
   };
 
   /**
-   * Prosedur asinkron untuk persistensi perubahan data kesehatan ke server
+   * Fungsi untuk menambah alergi ke dalam array
    */
-  const handleSaveChanges = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setAlertVisible(true);
-    }, 1500);
+  const handleAddAllergy = () => {
+    if (newAllergy.trim() !== '') {
+      setAllergies([...allergies, newAllergy.trim()]);
+      setNewAllergy(''); // Kosongkan input setelah ditambah
+    }
   };
 
   /**
-   * Komponen internal untuk standarisasi input metrik fisik dengan unit ukuran
+   * Fungsi untuk menghapus alergi dari array saat di-tap
    */
+  const handleRemoveAllergy = (indexToRemove: number) => {
+    setAllergies(allergies.filter((_, index) => index !== indexToRemove));
+  };
+
+  /**
+   * Menyimpan perubahan data kesehatan ke Server
+   */
+  const handleSaveChanges = async () => {
+    setIsLoading(true);
+    try {
+      const payload = {
+        berat_badan: weight,
+        tinggi_badan: height,
+        golongan_darah: bloodType,
+        catatan_medis: medicalNotes,
+        alergi: JSON.stringify(allergies) // Kirim sebagai string JSON ke Laravel
+      };
+
+      // Tembak data ke API Laravel
+      const response = await api.post('/profile/health', payload);
+      
+      if (response.data.status === 'success') {
+        setAlertVisible(true);
+      }
+    } catch (error) {
+      console.log('[API Health] Gagal menyimpan data:', error);
+      alert('Gagal menyimpan profil medis. Periksa koneksi internet Anda.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Komponen Input Metrik Reusable
   const MetricInput = ({ label, value, onChangeText, unit, icon }: any) => (
     <View className="flex-1 bg-gray-50 rounded-2xl p-3 border border-gray-100">
       <View className="flex-row items-center mb-2">
@@ -60,6 +129,7 @@ export default function HealthDataScreen({ navigation }: any) {
           value={value}
           onChangeText={onChangeText}
           keyboardType="numeric"
+          placeholder="0"
           className="text-2xl font-black text-gray-900 p-0 m-0 leading-tight"
           maxLength={3}
         />
@@ -68,11 +138,21 @@ export default function HealthDataScreen({ navigation }: any) {
     </View>
   );
 
+  // Jika sedang menarik data dari server, tampilkan loading layar penuh
+  if (isFetching) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 justify-center items-center">
+        <ActivityIndicator size="large" color="#0EA5E9" />
+        <Text className="text-gray-400 mt-4 font-bold">Sinkronisasi Rekam Medis...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         
-        {/* Bagian header navigasi dan judul fungsionalitas */}
+        {/* Header */}
         <View className="flex-row items-center mb-2 mt-4 px-6">
           <TouchableOpacity 
             onPress={() => navigation.goBack()} 
@@ -93,7 +173,7 @@ export default function HealthDataScreen({ navigation }: any) {
           bounces={false}
         >
 
-          {/* Banner informasi mengenai pentingnya sinkronisasi data medis */}
+          {/* Banner Informasi */}
           <View className="bg-amber-50 p-4 rounded-2xl flex-row items-center border border-amber-100 mb-6 shadow-sm">
             <Ionicons name="information-circle" size={24} color="#F59E0B" style={{ marginRight: 12 }} />
             <Text className="flex-1 text-xs text-amber-700 leading-relaxed font-medium">
@@ -101,7 +181,7 @@ export default function HealthDataScreen({ navigation }: any) {
             </Text>
           </View>
 
-          {/* Kelompok input untuk data biometrik fisik */}
+          {/* Metrik Fisik */}
           <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Metrik Fisik</Text>
           <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
             <View className="flex-row space-x-3 mb-4">
@@ -109,21 +189,21 @@ export default function HealthDataScreen({ navigation }: any) {
               <MetricInput label="Tinggi Badan" value={height} onChangeText={setHeight} unit="cm" icon="body" />
             </View>
 
-            {/* Visualisasi hasil kalkulasi indeks massa tubuh */}
+            {/* Visualisasi BMI Dinamis */}
             <View className="bg-sky-50 rounded-xl p-4 flex-row items-center justify-between border border-sky-100">
               <View>
                 <Text className="text-xs font-bold text-sky-700 uppercase mb-1">Body Mass Index (BMI)</Text>
-                <Text className="text-xs text-sky-600 font-medium">Status: <Text className="font-bold text-emerald-600">Normal</Text></Text>
+                <Text className="text-xs text-sky-600 font-medium">Status: <Text className="font-bold text-emerald-600">Terpantau</Text></Text>
               </View>
               <Text className="text-3xl font-black text-sky-600">{calculateBMI()}</Text>
             </View>
           </View>
 
-          {/* Kelompok input untuk informasi kondisi medis dan alergi */}
+          {/* Kondisi Medis & Alergi */}
           <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Kondisi Medis</Text>
           <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
             
-            {/* Informasi golongan darah dengan skema visual ABO */}
+            {/* Input Golongan Darah (Dibuat Editable) */}
             <View className="flex-row items-center justify-between mb-5 border-b border-gray-50 pb-4">
               <View className="flex-row items-center">
                 <View className="w-10 h-10 rounded-xl bg-rose-50 items-center justify-center mr-3">
@@ -134,30 +214,55 @@ export default function HealthDataScreen({ navigation }: any) {
                   <Text className="text-xs text-gray-400 mt-0.5">Sistem ABO & Rhesus</Text>
                 </View>
               </View>
-              <View className="bg-rose-500 px-3 py-1.5 rounded-lg shadow-sm shadow-rose-200">
-                <Text className="text-white font-black text-base">{bloodType}</Text>
+              <View className="bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 items-center justify-center">
+                <TextInput
+                  value={bloodType}
+                  onChangeText={setBloodType}
+                  placeholder="-"
+                  maxLength={3}
+                  autoCapitalize="characters"
+                  className="text-rose-500 font-black text-base p-0 m-0 text-center w-8"
+                />
               </View>
             </View>
 
-            {/* Representasi visual daftar alergi menggunakan komponen chip */}
+            {/* Input Alergi Dinamis */}
             <View className="mb-5 border-b border-gray-50 pb-4">
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Alergi Makanan</Text>
-                <TouchableOpacity>
-                  <Ionicons name="add-circle" size={20} color="#0EA5E9" />
+              <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Alergi Makanan</Text>
+              
+              {/* Form Tambah Alergi */}
+              <View className="flex-row items-center mb-3">
+                <TextInput
+                  value={newAllergy}
+                  onChangeText={setNewAllergy}
+                  placeholder="Ketik pantangan/alergi..."
+                  className="flex-1 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100 text-sm mr-2"
+                  onSubmitEditing={handleAddAllergy} // Bisa ditekan Enter dari Keyboard
+                />
+                <TouchableOpacity onPress={handleAddAllergy} className="bg-sky-50 p-2 rounded-xl border border-sky-100">
+                  <Ionicons name="add" size={20} color="#0EA5E9" />
                 </TouchableOpacity>
               </View>
+
+              {/* Daftar Tag Alergi */}
               <View className="flex-row flex-wrap gap-2">
                 {allergies.map((item, index) => (
-                  <View key={index} className="bg-red-50 px-3 py-1.5 rounded-full border border-red-100 flex-row items-center">
-                    <Ionicons name="warning" size={12} color="#EF4444" style={{ marginRight: 4 }} />
-                    <Text className="text-red-600 font-bold text-xs">{item}</Text>
-                  </View>
+                  <TouchableOpacity 
+                    key={index} 
+                    onPress={() => handleRemoveAllergy(index)} // Hapus jika di-tap
+                    className="bg-red-50 px-3 py-1.5 rounded-full border border-red-100 flex-row items-center active:bg-red-200"
+                  >
+                    <Text className="text-red-600 font-bold text-xs mr-1">{item}</Text>
+                    <Ionicons name="close-circle" size={14} color="#EF4444" />
+                  </TouchableOpacity>
                 ))}
+                {allergies.length === 0 && (
+                  <Text className="text-xs text-gray-400 italic">Belum ada data alergi.</Text>
+                )}
               </View>
             </View>
 
-            {/* Area input untuk deskripsi medis tambahan atau penyakit penyerta */}
+            {/* Catatan Khusus */}
             <View>
               <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Catatan Khusus / Penyakit Bawaan</Text>
               <TextInput
@@ -173,7 +278,7 @@ export default function HealthDataScreen({ navigation }: any) {
 
           </View>
 
-          {/* Tombol eksekusi penyimpanan dengan status pemuatan */}
+          {/* Tombol Simpan Real-Time API */}
           <TouchableOpacity 
             onPress={handleSaveChanges}
             disabled={isLoading}
@@ -189,7 +294,6 @@ export default function HealthDataScreen({ navigation }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Komponen dialog konfirmasi keberhasilan sinkronisasi data */}
       <CustomAlert 
         visible={alertVisible}
         type="success"

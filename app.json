@@ -30,17 +30,15 @@
     },
     "extra": {
       "eas": {
-        "projectId": "a7312457-6c82-4f86-b235-2373570acb8d"
+        "projectId": "f3a9b538-adac-4e7c-b785-143980f13efb"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
-
     "updates": {
-      "url": "https://u.expo.dev/a7312457-6c82-4f86-b235-2373570acb8d"
+      "url": "https://u.expo.dev/f3a9b538-adac-4e7c-b785-143980f13efb"
     },
-    
-    "owner": "bagussetiawan"
+    "owner": "bagussetiawan.dev"
   }
 }

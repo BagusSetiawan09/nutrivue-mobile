@@ -216,7 +216,6 @@ export default function ProfileScreen({ navigation }: any) {
         </TouchableOpacity>
 
         <Text className="text-center text-gray-300 text-[10px] font-medium mb-2">NutriVue App v1.0.0 Build 26</Text>
-        <Text className="text-center text-gray-300 text-[10px] font-medium">Dirancang di Medan Indonesia</Text>
 
       </ScrollView>
 
