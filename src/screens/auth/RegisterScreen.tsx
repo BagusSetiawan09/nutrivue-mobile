@@ -1,17 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
-  Platform,
-  ScrollView,
-  Modal,
-  Animated,
-  Easing,
-  Dimensions,
-  ActivityIndicator
+  View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Modal, Animated, Easing, Dimensions, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; 
@@ -22,6 +11,7 @@ import CustomAlert from '../../components/CustomAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function RegisterScreen({ navigation }: any) {
+  // ... (State variables letakkan sama persis seperti kode Anda sebelumnya)
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -31,42 +21,27 @@ export default function RegisterScreen({ navigation }: any) {
   const [kategori, setKategori] = useState('');
   const [tempatLahir, setTempatLahir] = useState('');
   const [alamat, setAlamat] = useState('');
-
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const [alertConfig, setAlertConfig] = useState({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info' as 'success' | 'error' | 'warning' | 'info',
-    onConfirm: () => {},
+    visible: false, title: '', message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info', onConfirm: () => {},
   });
 
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
-    if (text.trim() === '') {
-      setEmailError('');
-      return;
-    }
+    if (text.trim() === '') { setEmailError(''); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(text)) {
-      setEmailError('Format email belum lengkap');
-      return;
-    }
+    if (!emailRegex.test(text)) { setEmailError('Format email belum lengkap'); return; }
     const domain = text.split('@')[1]?.toLowerCase();
     const commonTypos = ['gamail.com', 'gmil.com', 'gmai.com', 'yaho.com', 'yahho.com'];
-    if (commonTypos.includes(domain)) {
-      setEmailError(`Sepertinya typo. Apakah maksud Anda @${domain.startsWith('y') ? 'yahoo' : 'gmail'}.com?`);
-      return;
-    }
+    if (commonTypos.includes(domain)) { setEmailError(`Sepertinya typo. Apakah maksud Anda @${domain.startsWith('y') ? 'yahoo' : 'gmail'}.com?`); return; }
     setEmailError('');
   };
 
-  // Logic Modal Picker
   const [visible, setVisible] = useState(false); 
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current; 
   const opacity = useRef(new Animated.Value(0)).current; 
@@ -90,8 +65,7 @@ export default function RegisterScreen({ navigation }: any) {
 
   const togglePicker = (show: boolean) => {
     if (show) {
-      setVisible(true); 
-      setIsAnimationFinished(false); 
+      setVisible(true); setIsAnimationFinished(false); 
       Animated.parallel([
         Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(translateY, { toValue: 0, duration: 400, easing: Easing.bezier(0.25, 0.1, 0.25, 1), useNativeDriver: true })
@@ -104,10 +78,7 @@ export default function RegisterScreen({ navigation }: any) {
     }
   };
 
-  const handleSaveDate = () => {
-    setTanggalLahirLabel(`${selectedDay} ${selectedMonth} ${selectedYear}`);
-    togglePicker(false); 
-  };
+  const handleSaveDate = () => { setTanggalLahirLabel(`${selectedDay} ${selectedMonth} ${selectedYear}`); togglePicker(false); };
 
   const isPasswordMatch = password === confirmPassword && password.length >= 8;
   const isFormValid = isPasswordMatch && email.length > 0 && emailError === '' && kategori !== '' && tanggalLahirLabel !== '';
@@ -115,28 +86,17 @@ export default function RegisterScreen({ navigation }: any) {
   const handleRegister = async () => {
     setIsLoading(true); 
     try {
-      const payload = {
-        name, email, password, kategori, tempat_lahir: tempatLahir,
-        tanggal_lahir: tanggalLahirLabel, alamat, phone,
-      };
+      const payload = { name, email, password, kategori, tempat_lahir: tempatLahir, tanggal_lahir: tanggalLahirLabel, alamat, phone };
       const response = await api.post('/register', payload);
       if (response.data.status === 'success') {
         setAlertConfig({
-          visible: true,
-          title: 'Pendaftaran Berhasil!',
-          message: 'Akun Anda telah sukses dibuat! Silakan masuk untuk melanjutkan.',
-          type: 'success',
-          onConfirm: () => {
-            closeAlert();
-            navigation.navigate('Login');
-          },
+          visible: true, title: 'Pendaftaran Berhasil!', message: 'Akun Anda telah sukses dibuat! Silakan masuk untuk melanjutkan.', type: 'success',
+          onConfirm: () => { closeAlert(); navigation.navigate('Login'); },
         });
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Terjadi kesalahan jaringan. Pastikan koneksi internet stabil.';
-      setAlertConfig({
-        visible: true, title: 'Pendaftaran Gagal', message: errorMessage, type: 'error', onConfirm: closeAlert,
-      });
+      setAlertConfig({ visible: true, title: 'Pendaftaran Gagal', message: errorMessage, type: 'error', onConfirm: closeAlert });
     } finally {
       setIsLoading(false);
     }
@@ -144,14 +104,18 @@ export default function RegisterScreen({ navigation }: any) {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        {/* ⚡ PERBAIKAN: Menambahkan paddingBottom: 60 agar pengguna bisa nge-scroll mentok sampai bawah tombol */}
+      
+      {/* ⚡ JURUS PAMUNGKAS ANDROID */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
+        
         <ScrollView 
           showsVerticalScrollIndicator={false} 
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }} 
+          /* ⚡ JURUS PAMUNGKAS: paddingBottom 150 agar area terbawah (tombol) aman di-scroll ke atas */
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 150 }} 
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          <View className="flex-1 px-8 py-10">
+          <View className="px-8 py-10">
             
             <View className="mb-8">
               <TouchableOpacity onPress={() => navigation.goBack()} className="mb-4">
@@ -167,11 +131,7 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text className="text-sm font-semibold text-gray-700 mb-3 ml-1">Pilih Kategori</Text>
                 <View className="flex-row justify-between">
                   {kategoriOptions.map((item) => (
-                    <TouchableOpacity
-                      key={item.value}
-                      onPress={() => setKategori(item.value)}
-                      className={`flex-1 mx-1 p-3 rounded-2xl items-center border ${kategori === item.value ? 'bg-primary border-primary' : 'bg-white border-gray-100'} shadow-sm`}
-                    >
+                    <TouchableOpacity key={item.value} onPress={() => setKategori(item.value)} className={`flex-1 mx-1 p-3 rounded-2xl items-center border ${kategori === item.value ? 'bg-primary border-primary' : 'bg-white border-gray-100'} shadow-sm`}>
                       <Ionicons name={item.icon as any} size={20} color={kategori === item.value ? '#FFFFFF' : '#9CA3AF'} />
                       <Text className={`text-[10px] mt-1 font-bold ${kategori === item.value ? 'text-white' : 'text-gray-500'}`}>{item.label}</Text>
                     </TouchableOpacity>
@@ -192,9 +152,7 @@ export default function RegisterScreen({ navigation }: any) {
               <View>
                 <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">Tanggal Lahir</Text>
                 <TouchableOpacity onPress={() => togglePicker(true)} className="bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm flex-row items-center justify-between">
-                  <Text className={tanggalLahirLabel ? "text-gray-900 text-base" : "text-gray-400 text-base"} numberOfLines={1}>
-                    {tanggalLahirLabel || 'Pilih tanggal lahir Anda'}
-                  </Text>
+                  <Text className={tanggalLahirLabel ? "text-gray-900 text-base" : "text-gray-400 text-base"} numberOfLines={1}>{tanggalLahirLabel || 'Pilih tanggal lahir Anda'}</Text>
                   <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
@@ -206,14 +164,7 @@ export default function RegisterScreen({ navigation }: any) {
 
               <View>
                 <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">Alamat Email</Text>
-                <TextInput 
-                  className={`bg-white border ${emailError ? 'border-red-500' : 'border-gray-100'} rounded-2xl px-5 py-4 text-base text-gray-900 shadow-sm`} 
-                  placeholder="contoh@email.com" 
-                  keyboardType="email-address" 
-                  autoCapitalize="none" 
-                  value={email} 
-                  onChangeText={handleEmailChange} 
-                />
+                <TextInput className={`bg-white border ${emailError ? 'border-red-500' : 'border-gray-100'} rounded-2xl px-5 py-4 text-base text-gray-900 shadow-sm`} placeholder="contoh@email.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} />
                 {emailError ? <Text className="text-red-500 text-xs mt-2 ml-2 font-medium">{emailError}</Text> : null}
               </View>
 
@@ -240,23 +191,13 @@ export default function RegisterScreen({ navigation }: any) {
                     <Ionicons name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} size={22} color="#9CA3AF" />
                   </TouchableOpacity>
                 </View>
-                {confirmPassword.length > 0 && !isPasswordMatch && (
-                  <Text className="text-red-500 text-xs mt-2 ml-2 font-medium">Sandi tidak cocok atau kurang dari 8 karakter!</Text>
-                )}
+                {confirmPassword.length > 0 && !isPasswordMatch && <Text className="text-red-500 text-xs mt-2 ml-2 font-medium">Sandi tidak cocok atau kurang dari 8 karakter!</Text>}
               </View>
             </View>
 
             <View className="mt-10 mb-10">
-              <TouchableOpacity 
-                disabled={!isFormValid || isLoading} 
-                onPress={handleRegister} 
-                className={`${isFormValid && !isLoading ? 'bg-primary' : 'bg-gray-300'} rounded-2xl py-4 shadow-sm items-center justify-center`}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
-                ) : (
-                  <Text className="text-white font-bold text-lg">Buat Akun Sekarang</Text>
-                )}
+              <TouchableOpacity disabled={!isFormValid || isLoading} onPress={handleRegister} className={`${isFormValid && !isLoading ? 'bg-primary' : 'bg-gray-300'} rounded-2xl py-4 shadow-sm items-center justify-center`}>
+                {isLoading ? <ActivityIndicator color="#ffffff" size="small" /> : <Text className="text-white font-bold text-lg">Buat Akun Sekarang</Text>}
               </TouchableOpacity>
               
               <View className="flex-row justify-center mt-6">
@@ -270,7 +211,7 @@ export default function RegisterScreen({ navigation }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Modal Picker Tanggal Lahir (Disembunyikan untuk menyingkat tempat, biarkan utuh seperti aslinya) */}
+      {/* Modal Picker Tanggal Lahir (Disembunyikan untuk hemat baris, gunakan kode Modal Anda yang asli) */}
       <Modal visible={visible} transparent animationType="none">
         <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
           <Animated.View style={{ opacity }} className="flex-1 bg-black/50">
@@ -317,15 +258,7 @@ export default function RegisterScreen({ navigation }: any) {
         </SafeAreaView>
       </Modal>
 
-      <CustomAlert 
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onClose={closeAlert}
-        onConfirm={alertConfig.onConfirm}
-      />
-
+      <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={closeAlert} onConfirm={alertConfig.onConfirm} />
     </SafeAreaView>
   );
 }

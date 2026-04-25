@@ -6,7 +6,7 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView, 
   Platform,
-  ScrollView, // ⚡ DITAMBAHKAN: Untuk mengaktifkan fitur geser layar
+  ScrollView, 
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,48 +35,24 @@ export default function LoginScreen({ navigation }: any) {
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setAlertConfig({
-        visible: true,
-        title: 'Validasi Gagal',
-        message: 'Alamat Email dan Kata Sandi tidak boleh kosong.',
-        type: 'warning',
-        onConfirm: closeAlert,
+        visible: true, title: 'Validasi Gagal', message: 'Alamat Email dan Kata Sandi tidak boleh kosong.', type: 'warning', onConfirm: closeAlert,
       });
       return;
     }
-
     setIsLoading(true);
-
     try {
-      const response = await api.post('/login', {
-        email: email,
-        password: password
-      });
-
+      const response = await api.post('/login', { email, password });
       if (response.data.status === 'success') {
         await AsyncStorage.setItem('userToken', response.data.token);
         await AsyncStorage.setItem('user', JSON.stringify(response.data.data));
-
         setAlertConfig({
-          visible: true,
-          title: 'Login Berhasil!',
-          message: 'Selamat datang kembali di Nourish.',
-          type: 'success',
-          onConfirm: () => {
-            closeAlert();
-            navigation.replace('Home'); 
-          },
+          visible: true, title: 'Login Berhasil!', message: 'Selamat datang kembali di Nourish.', type: 'success',
+          onConfirm: () => { closeAlert(); navigation.replace('Home'); },
         });
       }
-
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Terjadi kesalahan jaringan saat mencoba masuk.';
-      setAlertConfig({
-        visible: true,
-        title: 'Login Gagal',
-        message: errorMessage,
-        type: 'error',
-        onConfirm: closeAlert,
-      });
+      setAlertConfig({ visible: true, title: 'Login Gagal', message: errorMessage, type: 'error', onConfirm: closeAlert });
     } finally {
       setIsLoading(false);
     }
@@ -85,26 +61,22 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       
-      {/* ⚡ PERBAIKAN STRUKTUR: KeyboardAvoidingView langsung membungkus ScrollView */}
+      {/* ⚡ JURUS PAMUNGKAS: Behavior 'undefined' untuk Android agar tidak konflik dengan sistem bawaan */}
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        {/* ⚡ JURUS SAKTI SCROLL: 
-            - flexGrow: 1 memastikan konten mengisi layar minimal sepenuh layar.
-            - keyboardShouldPersistTaps="handled" menutup keyboard otomatis jika area kosong ditekan, tanpa memblokir scroll.
-        */}
         <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
+          /* ⚡ JURUS PAMUNGKAS: paddingBottom 150 memastikan ruang ekstra agar tombol tidak tertelan keyboard */
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 150, justifyContent: 'center' }} 
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled" 
+          bounces={false}
         >
-          <View className="flex-1 justify-center px-8 py-10">
+          <View className="px-8 py-10">
             
             <View className="mb-12">
-              <Text className="text-4xl font-bold text-gray-900 tracking-tight mb-3">
-                Selamat Datang.
-              </Text>
+              <Text className="text-4xl font-bold text-gray-900 tracking-tight mb-3">Selamat Datang.</Text>
               <Text className="text-base text-gray-500 leading-relaxed">
                 Silakan masuk dengan akun Nourish Anda untuk melihat jadwal distribusi hari ini.
               </Text>
@@ -147,26 +119,14 @@ export default function LoginScreen({ navigation }: any) {
                 </View>
               </View>
 
-              <TouchableOpacity 
-                className="mt-4 flex-row justify-end"
-                onPress={() => navigation.navigate('ForgotPassword')}
-                disabled={isLoading}
-              >
+              <TouchableOpacity className="mt-4 flex-row justify-end" onPress={() => navigation.navigate('ForgotPassword')} disabled={isLoading}>
                 <Text className="text-primary font-medium text-sm">Lupa Kata Sandi?</Text>
               </TouchableOpacity>
             </View>
 
             <View className="mt-10">
-              <TouchableOpacity 
-                onPress={handleLogin}
-                disabled={isLoading}
-                className={`${isLoading ? 'bg-sky-400' : 'bg-primary active:bg-sky-700'} rounded-2xl py-4 shadow-sm items-center justify-center`}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
-                ) : (
-                  <Text className="text-white font-bold text-lg">Masuk</Text>
-                )}
+              <TouchableOpacity onPress={handleLogin} disabled={isLoading} className={`${isLoading ? 'bg-sky-400' : 'bg-primary active:bg-sky-700'} rounded-2xl py-4 shadow-sm items-center justify-center`}>
+                {isLoading ? <ActivityIndicator color="#ffffff" size="small" /> : <Text className="text-white font-bold text-lg">Masuk</Text>}
               </TouchableOpacity>
 
               <View className="flex-row justify-center mt-8">
@@ -181,15 +141,7 @@ export default function LoginScreen({ navigation }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <CustomAlert 
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onClose={closeAlert}
-        onConfirm={alertConfig.onConfirm}
-      />
-
+      <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={closeAlert} onConfirm={alertConfig.onConfirm} />
     </SafeAreaView>
   );
 }
