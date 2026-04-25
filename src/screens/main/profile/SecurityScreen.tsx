@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -45,8 +45,7 @@ const ActionRow = ({ icon, title, subtitle, color, isLast, onPress }: any) => (
 export default function SecurityScreen({ navigation }: any) {
   
   const [biometricEnabled, setBiometricEnabled] = useState(false); 
-  const [pinEnabled, setPinEnabled] = useState(true);
-  
+  const [pinEnabled, setPinEnabled] = useState(false);
   const [medicalVisibility, setMedicalVisibility] = useState(true);
   const [locationTracking, setLocationTracking] = useState(true);
   
@@ -54,12 +53,20 @@ export default function SecurityScreen({ navigation }: any) {
   const [isLocating, setIsLocating] = useState(false);
   const [deviceName, setDeviceName] = useState('Mendeteksi Perangkat...');
 
+  // Pengaturan kotak dialog utama
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
     title: '',
     message: '',
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
+
+  // Pengaturan status untuk konfigurasi pembuatan kode sandi
+  const [isPinModalVisible, setIsPinModalVisible] = useState(false);
+  const [pinStep, setPinStep] = useState(1);
+  const [tempPin, setTempPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState(false);
 
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
@@ -169,12 +176,56 @@ export default function SecurityScreen({ navigation }: any) {
     }
   };
 
+  // Fungsi pengatur status aktivasi kode aplikasi
+  const handlePinToggle = async (newValue: boolean) => {
+    if (newValue) {
+      setTempPin('');
+      setConfirmPin('');
+      setPinStep(1);
+      setPinError(false);
+      setIsPinModalVisible(true);
+    } else {
+      setPinEnabled(false);
+      await AsyncStorage.removeItem('appPin');
+    }
+  };
+
+  // Fungsi validasi masukan angka dari pengguna
+  const handlePinInput = async (text: string) => {
+    if (pinStep === 1) {
+      setTempPin(text);
+      if (text.length === 6) {
+        setTimeout(() => setPinStep(2), 200);
+      }
+    } else {
+      setConfirmPin(text);
+      setPinError(false);
+      if (text.length === 6) {
+        if (text === tempPin) {
+          await AsyncStorage.setItem('appPin', text);
+          setPinEnabled(true);
+          setIsPinModalVisible(false);
+          setAlertConfig({
+            visible: true,
+            title: 'Sandi Berhasil Dibuat',
+            message: 'Kode keamanan berhasil diaktifkan untuk melindungi aplikasi Anda.',
+            type: 'success'
+          });
+        } else {
+          setPinError(true);
+          setConfirmPin('');
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     const loadSettings = async () => {
       const bioState = await AsyncStorage.getItem('biometricEnabled');
-      if (bioState === 'true') {
-        setBiometricEnabled(true);
-      }
+      if (bioState === 'true') setBiometricEnabled(true);
+      
+      const pinState = await AsyncStorage.getItem('appPin');
+      if (pinState) setPinEnabled(true);
       
       try {
         const response = await api.get('/health');
@@ -219,7 +270,9 @@ export default function SecurityScreen({ navigation }: any) {
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
           <ActionRow icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" onPress={() => {}} />
           <ToggleRow icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" value={biometricEnabled} onValueChange={handleBiometricToggle} />
-          <ToggleRow icon="keypad" title="Kunci Aplikasi PIN" subtitle="Minta PIN setiap membuka aplikasi" color="amber" value={pinEnabled} onValueChange={setPinEnabled} isLast={true} />
+          
+          {/* Komponen sakelar kode aplikasi yang dihubungkan ke fungsi pengaturan */}
+          <ToggleRow icon="keypad" title="Kunci Aplikasi PIN" subtitle="Minta sandi angka setiap membuka aplikasi" color="amber" value={pinEnabled} onValueChange={handlePinToggle} isLast={true} />
         </View>
 
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Kontrol Privasi</Text>
@@ -254,6 +307,49 @@ export default function SecurityScreen({ navigation }: any) {
         </View>
 
       </ScrollView>
+
+      {/* Komponen pelapis untuk antarmuka pembuatan sandi */}
+      <Modal visible={isPinModalVisible} transparent animationType="slide">
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-white rounded-t-3xl p-8 pb-12 h-2/3 shadow-2xl items-center">
+            
+            <View className="w-16 h-16 bg-amber-50 rounded-full items-center justify-center mb-6">
+              <Ionicons name={pinStep === 1 ? "keypad" : "checkmark-circle"} size={32} color="#F59E0B" />
+            </View>
+            
+            <Text className="text-2xl font-bold text-gray-900 mb-2">
+              {pinStep === 1 ? 'Buat Kode Keamanan' : 'Konfirmasi Kode'}
+            </Text>
+            <Text className="text-gray-500 text-center mb-8">
+              {pinStep === 1 
+                ? 'Masukkan enam digit angka untuk mengunci aplikasi' 
+                : 'Silakan ketik ulang enam digit angka sebelumnya'}
+            </Text>
+
+            <TextInput
+              className={`bg-gray-50 border ${pinError ? 'border-red-500' : 'border-gray-200'} rounded-2xl w-full py-4 text-center text-3xl font-bold text-gray-900 tracking-[10px]`}
+              placeholder="••••••"
+              placeholderTextColor="#D1D5DB"
+              keyboardType="numeric"
+              secureTextEntry
+              maxLength={6}
+              value={pinStep === 1 ? tempPin : confirmPin}
+              onChangeText={handlePinInput}
+              autoFocus
+            />
+            
+            {pinError && <Text className="text-red-500 mt-4 font-medium">Sandi tidak cocok silakan coba lagi</Text>}
+
+            <TouchableOpacity 
+              onPress={() => setIsPinModalVisible(false)} 
+              className="mt-10"
+            >
+              <Text className="text-gray-400 font-bold text-base">Batalkan</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
 
       <CustomAlert 
         visible={alertConfig.visible}
