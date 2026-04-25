@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 // ⚡ IMPORT SENJATA RADAR EXPO
 import * as Location from 'expo-location';
+import * as Device from 'expo-device'; // ⚡ IMPORT PEMBACA PERANGKAT
 
 const ToggleRow = ({ icon, title, subtitle, color, value, onValueChange, isLast }: any) => (
   <View className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
@@ -43,39 +44,36 @@ export default function SecurityScreen({ navigation }: any) {
   const [pinEnabled, setPinEnabled] = useState(true);
   const [medicalVisibility, setMedicalVisibility] = useState(true);
   
-  // ⚡ STATE LOKASI
   const [locationTracking, setLocationTracking] = useState(true);
   const [cityName, setCityName] = useState('Mendeteksi...');
   const [isLocating, setIsLocating] = useState(false);
 
-  // ⚡ EFEK RADAR: Berjalan setiap kali toggle Lokasi dinyalakan/dimatikan
+  // ⚡ MENGAMBIL NAMA PERANGKAT SECARA OTOMATIS
+  // Device.modelName akan mengembalikan "iPhone 13", "Redmi Note 11", dll.
+  const deviceName = Device.modelName || 'Ponsel Pintar';
+
   useEffect(() => {
     (async () => {
       if (locationTracking) {
         setIsLocating(true);
         setCityName('Mencari satelit...');
         
-        // 1. Minta Izin GPS ke HP Pengguna
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setCityName('Akses Ditolak');
-          setLocationTracking(false); // Matikan toggle jika ditolak
+          setLocationTracking(false); 
           setIsLocating(false);
           return;
         }
 
         try {
-          // 2. Ambil Koordinat saat ini
           let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          
-          // 3. Ubah Koordinat jadi Nama Kota (Reverse Geocoding)
           let geocode = await Location.reverseGeocodeAsync({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude
           });
 
           if (geocode.length > 0) {
-            // Ambil nama kota atau sub-region
             const city = geocode[0].city || geocode[0].subregion || 'Lokasi Ditemukan';
             setCityName(city);
           } else {
@@ -87,11 +85,10 @@ export default function SecurityScreen({ navigation }: any) {
           setIsLocating(false);
         }
       } else {
-        // Jika toggle dimatikan
         setCityName('Pelacakan Nonaktif');
       }
     })();
-  }, [locationTracking]); // Akan dipicu ulang jika locationTracking berubah
+  }, [locationTracking]); 
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -131,43 +128,44 @@ export default function SecurityScreen({ navigation }: any) {
           <ToggleRow icon="location" title="Pelacakan Lokasi Distribusi" subtitle="Simpan riwayat lokasi pengambilan gizi" color="sky" value={locationTracking} onValueChange={setLocationTracking} isLast={true} />
         </View>
 
-        {/* Manajemen sesi perangkat keras yang terhubung ke sistem */}
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Perangkat Tertaut</Text>
-        <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-8">
+        <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8">
           
-          {/* ⚡ FIX LAYOUT: Penambahan flex-1 pada bagian kiri dan pembatasan lebar pada bagian kanan */}
-          <View className="flex-row items-center justify-between border-b border-gray-50 pb-4 mb-4">
+          {/* ⚡ LAYOUT PREMIUM BARU: Vertikal, Clean, Enterprise Look */}
+          <View className="flex-row items-center border-b border-gray-50 pb-5 mb-5">
             
-            {/* Bagian Kiri (Ikon & Nama Perangkat) */}
-            <View className="flex-row items-center flex-1 pr-4">
-              <View className="w-10 h-10 bg-slate-50 rounded-xl items-center justify-center mr-3 shrink-0">
-                <Ionicons name="phone-portrait" size={20} color="#64748B" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-gray-900 font-bold text-sm" numberOfLines={1}>Ponsel Pintar Pengguna</Text>
-                <Text className="text-emerald-500 font-bold text-[10px] mt-0.5" numberOfLines={1}>Sedang Digunakan Saat Ini</Text>
-              </View>
+            {/* Ikon Perangkat */}
+            <View className="w-14 h-14 bg-slate-50 rounded-2xl items-center justify-center mr-4 shrink-0 border border-slate-100">
+              <Ionicons name={Platform.OS === 'ios' ? 'phone-portrait' : 'phone-portrait-outline'} size={28} color="#64748B" />
             </View>
-            
-            {/* ⚡ Bagian Kanan (Lokasi Dinamis) - Diberi batasan maksimal 40% dari layar */}
-            <View className="items-end justify-center max-w-[40%]">
-              {isLocating ? (
-                <ActivityIndicator size="small" color="#0EA5E9" />
-              ) : (
-                <Text 
-                  className={`text-[11px] text-right font-bold ${locationTracking ? 'text-sky-600' : 'text-gray-400'}`}
-                  numberOfLines={2} 
-                >
-                  {cityName}
-                </Text>
-              )}
+
+            {/* Informasi Bertingkat */}
+            <View className="flex-1 justify-center">
+              <Text className="text-emerald-500 font-bold text-[10px] uppercase tracking-wider mb-1">
+                Sedang Digunakan Saat Ini
+              </Text>
+              
+              <Text className="text-gray-900 font-black text-base uppercase tracking-wider mb-1.5" numberOfLines={1}>
+                {deviceName}
+              </Text>
+              
+              <View className="flex-row items-center">
+                <Ionicons name="location" size={12} color={locationTracking ? '#0EA5E9' : '#9CA3AF'} style={{ marginRight: 4 }} />
+                {isLocating ? (
+                  <ActivityIndicator size="small" color="#0EA5E9" style={{ transform: [{ scale: 0.7 }] }} />
+                ) : (
+                  <Text className={`text-[11px] font-bold ${locationTracking ? 'text-sky-600' : 'text-gray-400'}`} numberOfLines={1}>
+                    {cityName}
+                  </Text>
+                )}
+              </View>
             </View>
 
           </View>
           
-          <TouchableOpacity className="flex-row items-center justify-center py-2 active:bg-gray-50 rounded-xl">
+          <TouchableOpacity className="flex-row items-center justify-center py-3 bg-red-50 active:bg-red-100 rounded-xl border border-red-100">
             <Ionicons name="log-out-outline" size={18} color="#EF4444" style={{ marginRight: 6 }} />
-            <Text className="text-red-500 font-bold text-sm">Keluar dari Semua Perangkat</Text>
+            <Text className="text-red-600 font-bold text-sm">Keluar dari Semua Perangkat</Text>
           </TouchableOpacity>
         </View>
 
