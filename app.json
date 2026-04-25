@@ -39,6 +39,14 @@
     "updates": {
       "url": "https://u.expo.dev/f3a9b538-adac-4e7c-b785-143980f13efb"
     },
-    "owner": "bagussetiawan.dev"
+    "owner": "bagussetiawan.dev",
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Izinkan $(PRODUCT_NAME) menggunakan lokasi Anda untuk melacak data distribusi gizi."
+        }
+      ]
+    ]
   }
 }

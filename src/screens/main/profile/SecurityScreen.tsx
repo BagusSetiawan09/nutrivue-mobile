@@ -131,25 +131,33 @@ export default function SecurityScreen({ navigation }: any) {
           <ToggleRow icon="location" title="Pelacakan Lokasi Distribusi" subtitle="Simpan riwayat lokasi pengambilan gizi" color="sky" value={locationTracking} onValueChange={setLocationTracking} isLast={true} />
         </View>
 
+        {/* Manajemen sesi perangkat keras yang terhubung ke sistem */}
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Perangkat Tertaut</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-8">
+          
+          {/* ⚡ FIX LAYOUT: Penambahan flex-1 pada bagian kiri dan pembatasan lebar pada bagian kanan */}
           <View className="flex-row items-center justify-between border-b border-gray-50 pb-4 mb-4">
-            <View className="flex-row items-center">
-              <View className="w-10 h-10 bg-slate-50 rounded-xl items-center justify-center mr-3">
+            
+            {/* Bagian Kiri (Ikon & Nama Perangkat) */}
+            <View className="flex-row items-center flex-1 pr-4">
+              <View className="w-10 h-10 bg-slate-50 rounded-xl items-center justify-center mr-3 shrink-0">
                 <Ionicons name="phone-portrait" size={20} color="#64748B" />
               </View>
-              <View>
-                <Text className="text-gray-900 font-bold text-sm">Ponsel Pintar Pengguna</Text>
-                <Text className="text-emerald-500 font-bold text-[10px] mt-0.5">Sedang Digunakan Saat Ini</Text>
+              <View className="flex-1">
+                <Text className="text-gray-900 font-bold text-sm" numberOfLines={1}>Ponsel Pintar Pengguna</Text>
+                <Text className="text-emerald-500 font-bold text-[10px] mt-0.5" numberOfLines={1}>Sedang Digunakan Saat Ini</Text>
               </View>
             </View>
             
-            {/* ⚡ TAMPILAN LOKASI DINAMIS */}
-            <View className="items-end">
+            {/* ⚡ Bagian Kanan (Lokasi Dinamis) - Diberi batasan maksimal 40% dari layar */}
+            <View className="items-end justify-center max-w-[40%]">
               {isLocating ? (
                 <ActivityIndicator size="small" color="#0EA5E9" />
               ) : (
-                <Text className={`text-xs font-bold ${locationTracking ? 'text-sky-600' : 'text-gray-400'}`}>
+                <Text 
+                  className={`text-[11px] text-right font-bold ${locationTracking ? 'text-sky-600' : 'text-gray-400'}`}
+                  numberOfLines={2} 
+                >
                   {cityName}
                 </Text>
               )}
