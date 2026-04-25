@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -98,38 +99,46 @@ export default function SecurityScreen({ navigation }: any) {
     })();
   }, [locationTracking]); 
 
-  // ⚡ LOGIKA SENSOR BIOMETRIK (FASE 2)
+  // ⚡ LOGIKA SENSOR BIOMETRIK & PENYIMPANAN
   const handleBiometricToggle = async (newValue: boolean) => {
     if (newValue) {
-      // Jika user ingin MENYALAKAN, kita tes dulu mesinnya
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!hasHardware || !isEnrolled) {
-        Alert.alert("Gagal", "Perangkat Anda tidak mendukung Sidik Jari/Face ID, atau Anda belum mendaftarkannya di pengaturan HP.");
+        Alert.alert("Gagal", "Perangkat Anda tidak mendukung Sidik Jari/Face ID, atau Anda belum mendaftarkannya.");
         return;
       }
 
-      // Panggil sensor HP muncul ke layar
       const auth = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Pindai sidik jari Anda untuk mengaktifkan keamanan Biometrik NutriVue.',
         fallbackLabel: 'Gunakan Sandi HP',
         cancelLabel: 'Batal'
       });
 
-      // Jika sidik jari benar, nyalakan tombolnya
       if (auth.success) {
         setBiometricEnabled(true);
-        Alert.alert("Berhasil", "Autentikasi Biometrik berhasil diaktifkan!");
+        await AsyncStorage.setItem('biometricEnabled', 'true'); // ⚡ SIMPAN KE BRANKAS!
+        Alert.alert("Berhasil", "Autentikasi Biometrik aktif! Selanjutnya Anda harus menggunakan sidik jari saat membuka aplikasi.");
       } else {
-        // Jika gagal/batal, biarkan tetap mati
         setBiometricEnabled(false);
       }
     } else {
-      // Jika user ingin MEMATIKAN, langsung matikan saja
       setBiometricEnabled(false);
+      await AsyncStorage.removeItem('biometricEnabled'); // ⚡ HAPUS DARI BRANKAS!
     }
   };
+
+  // ⚡ TAMBAHKAN USE-EFFECT INI UNTUK MEMBACA BRANKAS SAAT HALAMAN DIBUKA
+  useEffect(() => {
+    const loadSettings = async () => {
+      const bioState = await AsyncStorage.getItem('biometricEnabled');
+      if (bioState === 'true') {
+        setBiometricEnabled(true);
+      }
+    };
+    loadSettings();
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">

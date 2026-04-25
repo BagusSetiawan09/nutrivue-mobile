@@ -1,3 +1,4 @@
+import * as LocalAuthentication from 'expo-local-authentication';
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -49,11 +50,31 @@ export default function App() {
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
+
         if (token) {
-          setInitialRoute('Home'); 
+          // 1. Cek apakah user mengaktifkan gembok sidik jari
+          const isBioEnabled = await AsyncStorage.getItem('biometricEnabled');
+
+          if (isBioEnabled === 'true') {
+            // 2. Jika aktif, minta sidik jari!
+            const auth = await LocalAuthentication.authenticateAsync({
+              promptMessage: 'Pindai sidik jari untuk membuka NutriVue',
+              fallbackLabel: 'Gunakan Sandi',
+              cancelLabel: 'Batal'
+            });
+
+            if (auth.success) {
+              setInitialRoute('Home'); // Sukses, silakan masuk
+            } else {
+              setInitialRoute('Login'); // Gagal/Batal, tendang ke halaman Login
+            }
+          } else {
+            // Jika tidak mengaktifkan sidik jari, langsung masuk saja
+            setInitialRoute('Home'); 
+          }
         }
       } catch (e) {
-        console.log('Sistem gagal memeriksa token akses perangkat', e);
+        console.log('Sistem gagal memeriksa token akses', e);
       } finally {
         setIsLoading(false);
       }
