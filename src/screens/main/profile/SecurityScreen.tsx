@@ -1,13 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import * as Location from 'expo-location';
 import * as Device from 'expo-device';
-// ⚡ IMPORT SENJATA BIOMETRIK
 import * as LocalAuthentication from 'expo-local-authentication';
+
+// Mengimpor komponen dialog kustom dari direktori utama
+import CustomAlert from '../../../components/CustomAlert';
 
 const ToggleRow = ({ icon, title, subtitle, color, value, onValueChange, isLast }: any) => (
   <View className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
@@ -42,7 +44,7 @@ const ActionRow = ({ icon, title, subtitle, color, isLast, onPress }: any) => (
 
 export default function SecurityScreen({ navigation }: any) {
   
-  // Biometrik kita matikan dulu di awal agar bisa dites menyalakannya
+  // Memastikan fitur biometrik dinonaktifkan pada tahap awal untuk keperluan validasi
   const [biometricEnabled, setBiometricEnabled] = useState(false); 
   const [pinEnabled, setPinEnabled] = useState(true);
   const [medicalVisibility, setMedicalVisibility] = useState(true);
@@ -53,7 +55,17 @@ export default function SecurityScreen({ navigation }: any) {
 
   const [deviceName, setDeviceName] = useState('Mendeteksi Perangkat...');
 
-  // ⚡ LOGIKA NAMA PERANGKAT (FASE 1)
+  // Mendeklarasikan status untuk menampilkan kotak dialog kustom
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+  });
+
+  const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
+
+  // Logika untuk mengambil nama perangkat pengguna secara dinamis
   useEffect(() => {
     const brand = Device.brand ? Device.brand.toUpperCase() : '';
     const model = Device.modelName || 'PONSEL PINTAR';
@@ -64,7 +76,7 @@ export default function SecurityScreen({ navigation }: any) {
     }
   }, []);
 
-  // ⚡ LOGIKA SATELIT GPS (FASE 1)
+  // Logika untuk melacak koordinat lokasi pengguna
   useEffect(() => {
     (async () => {
       if (locationTracking) {
@@ -99,14 +111,20 @@ export default function SecurityScreen({ navigation }: any) {
     })();
   }, [locationTracking]); 
 
-  // ⚡ LOGIKA SENSOR BIOMETRIK & PENYIMPANAN
+  // Logika autentikasi biometrik dan penyimpanan status
   const handleBiometricToggle = async (newValue: boolean) => {
     if (newValue) {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!hasHardware || !isEnrolled) {
-        Alert.alert("Gagal", "Perangkat Anda tidak mendukung Sidik Jari/Face ID, atau Anda belum mendaftarkannya.");
+        // Menampilkan peringatan kustom apabila perangkat tidak mendukung biometrik
+        setAlertConfig({
+          visible: true,
+          title: 'Sensor Tidak Ditemukan',
+          message: 'Perangkat Anda tidak mendukung pemindai wajah atau sidik jari untuk mengaktifkan fitur ini.',
+          type: 'warning'
+        });
         return;
       }
 
@@ -118,18 +136,27 @@ export default function SecurityScreen({ navigation }: any) {
 
       if (auth.success) {
         setBiometricEnabled(true);
-        await AsyncStorage.setItem('biometricEnabled', 'true'); // ⚡ SIMPAN KE BRANKAS!
-        Alert.alert("Berhasil", "Autentikasi Biometrik aktif! Selanjutnya Anda harus menggunakan sidik jari saat membuka aplikasi.");
+        // Menyimpan preferensi biometrik ke dalam memori lokal perangkat
+        await AsyncStorage.setItem('biometricEnabled', 'true'); 
+        
+        // Menampilkan pemberitahuan sukses menggunakan dialog kustom
+        setAlertConfig({
+          visible: true,
+          title: 'Keamanan Ditingkatkan',
+          message: 'Autentikasi Biometrik aktif. Selanjutnya Anda wajib menggunakan sidik jari saat membuka aplikasi.',
+          type: 'success'
+        });
       } else {
         setBiometricEnabled(false);
       }
     } else {
       setBiometricEnabled(false);
-      await AsyncStorage.removeItem('biometricEnabled'); // ⚡ HAPUS DARI BRANKAS!
+      // Menghapus preferensi biometrik dari memori lokal perangkat
+      await AsyncStorage.removeItem('biometricEnabled'); 
     }
   };
 
-  // ⚡ TAMBAHKAN USE-EFFECT INI UNTUK MEMBACA BRANKAS SAAT HALAMAN DIBUKA
+  // Memuat pengaturan keamanan saat halaman dibuka
   useEffect(() => {
     const loadSettings = async () => {
       const bioState = await AsyncStorage.getItem('biometricEnabled');
@@ -169,7 +196,7 @@ export default function SecurityScreen({ navigation }: any) {
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
           <ActionRow icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" onPress={() => {}} />
           
-          {/* ⚡ TOGGLE BIOMETRIK DIPASANGKAN DENGAN FUNGSI BARU */}
+          {/* Komponen sakelar untuk mengaktifkan fitur biometrik */}
           <ToggleRow 
             icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" 
             value={biometricEnabled} onValueChange={handleBiometricToggle} 
@@ -187,6 +214,7 @@ export default function SecurityScreen({ navigation }: any) {
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Perangkat Tertaut</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8">
           
+          {/* Tampilan daftar perangkat yang sedang digunakan */}
           <View className="flex-row items-center border-b border-gray-50 pb-5 mb-5">
             <View className="w-14 h-14 bg-slate-50 rounded-2xl items-center justify-center mr-4 shrink-0 border border-slate-100">
               <Ionicons name={Platform.OS === 'ios' ? 'phone-portrait' : 'phone-portrait-outline'} size={28} color="#64748B" />
@@ -212,6 +240,17 @@ export default function SecurityScreen({ navigation }: any) {
         </View>
 
       </ScrollView>
+
+      {/* Komponen dialog kustom yang dirender di lapisan teratas */}
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={closeAlert}
+        onConfirm={closeAlert}
+      />
+
     </SafeAreaView>
   );
 }

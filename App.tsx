@@ -52,11 +52,9 @@ export default function App() {
         const token = await AsyncStorage.getItem('userToken');
 
         if (token) {
-          // 1. Cek apakah user mengaktifkan gembok sidik jari
           const isBioEnabled = await AsyncStorage.getItem('biometricEnabled');
 
           if (isBioEnabled === 'true') {
-            // 2. Jika aktif, minta sidik jari!
             const auth = await LocalAuthentication.authenticateAsync({
               promptMessage: 'Pindai sidik jari untuk membuka NutriVue',
               fallbackLabel: 'Gunakan Sandi',
@@ -64,12 +62,11 @@ export default function App() {
             });
 
             if (auth.success) {
-              setInitialRoute('Home'); // Sukses, silakan masuk
+              setInitialRoute('Home');
             } else {
-              setInitialRoute('Login'); // Gagal/Batal, tendang ke halaman Login
+              setInitialRoute('Login');
             }
           } else {
-            // Jika tidak mengaktifkan sidik jari, langsung masuk saja
             setInitialRoute('Home'); 
           }
         }
