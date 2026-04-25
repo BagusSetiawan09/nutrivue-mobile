@@ -75,11 +75,16 @@ export default function ProfileScreen({ navigation }: any) {
   const handleLogout = async () => {
     setLogoutModalVisible(false);
     try {
-      await AsyncStorage.removeItem('auth_token'); // Pastikan ini sesuai dengan nama token login Anda
-      await AsyncStorage.removeItem('user'); 
-      navigation.replace('Login'); 
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('user');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+      
     } catch (e) {
       console.log('Kegagalan terminasi sesi pengguna', e);
+      alert('Gagal Logout. Silakan coba lagi.');
     }
   };
 

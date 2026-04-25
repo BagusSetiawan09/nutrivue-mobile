@@ -67,8 +67,7 @@ export default function LoginScreen({ navigation }: any) {
         className="flex-1"
       >
         <ScrollView 
-          /* ⚡ JURUS PAMUNGKAS: paddingBottom 150 memastikan ruang ekstra agar tombol tidak tertelan keyboard */
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 150, justifyContent: 'center' }} 
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 50 }} 
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled" 
           bounces={false}
