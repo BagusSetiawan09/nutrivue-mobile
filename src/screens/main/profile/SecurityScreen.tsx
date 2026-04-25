@@ -264,7 +264,7 @@ export default function SecurityScreen({ navigation }: any) {
 
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Metode Akses</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
-          <ActionRow icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" onPress={() => {}} />
+          <ActionRow icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" onPress={() => navigation.navigate('ChangePassword')} />
           <ToggleRow icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" value={biometricEnabled} onValueChange={handleBiometricToggle} />
           <ToggleRow icon="keypad" title="Kunci Aplikasi PIN" subtitle="Minta sandi angka setiap membuka aplikasi" color="amber" value={pinEnabled} onValueChange={handlePinToggle} isLast={true} />
         </View>

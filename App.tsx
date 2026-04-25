@@ -12,6 +12,7 @@ import ScanScreen from './src/screens/main/ScanScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
+import ChangePasswordScreen from './src/screens/main/profile/ChangePasswordScreen';
 import HomeScreen from './src/screens/main/HomeScreen';
 import MenuScreen from './src/screens/main/MenuScreen';
 import HistoryScreen from './src/screens/main/HistoryScreen';
@@ -102,6 +103,7 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
           
           {/* Mendaftarkan layar pelindung aplikasi */}
           <Stack.Screen name="PinUnlock" component={PinUnlockScreen} />
