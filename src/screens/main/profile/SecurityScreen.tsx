@@ -8,8 +8,8 @@ import * as Location from 'expo-location';
 import * as Device from 'expo-device';
 import * as LocalAuthentication from 'expo-local-authentication';
 
-// Mengimpor komponen dialog kustom dari direktori utama
 import CustomAlert from '../../../components/CustomAlert';
+import api from '../../../config/api';
 
 const ToggleRow = ({ icon, title, subtitle, color, value, onValueChange, isLast }: any) => (
   <View className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
@@ -44,18 +44,16 @@ const ActionRow = ({ icon, title, subtitle, color, isLast, onPress }: any) => (
 
 export default function SecurityScreen({ navigation }: any) {
   
-  // Memastikan fitur biometrik dinonaktifkan pada tahap awal untuk keperluan validasi
   const [biometricEnabled, setBiometricEnabled] = useState(false); 
   const [pinEnabled, setPinEnabled] = useState(true);
-  const [medicalVisibility, setMedicalVisibility] = useState(true);
   
+  const [medicalVisibility, setMedicalVisibility] = useState(true);
   const [locationTracking, setLocationTracking] = useState(true);
+  
   const [cityName, setCityName] = useState('Mendeteksi...');
   const [isLocating, setIsLocating] = useState(false);
-
   const [deviceName, setDeviceName] = useState('Mendeteksi Perangkat...');
 
-  // Mendeklarasikan status untuk menampilkan kotak dialog kustom
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
     title: '',
@@ -65,7 +63,6 @@ export default function SecurityScreen({ navigation }: any) {
 
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
-  // Logika untuk mengambil nama perangkat pengguna secara dinamis
   useEffect(() => {
     const brand = Device.brand ? Device.brand.toUpperCase() : '';
     const model = Device.modelName || 'PONSEL PINTAR';
@@ -76,7 +73,6 @@ export default function SecurityScreen({ navigation }: any) {
     }
   }, []);
 
-  // Logika untuk melacak koordinat lokasi pengguna
   useEffect(() => {
     (async () => {
       if (locationTracking) {
@@ -111,39 +107,34 @@ export default function SecurityScreen({ navigation }: any) {
     })();
   }, [locationTracking]); 
 
-  // Logika autentikasi biometrik dan penyimpanan status
   const handleBiometricToggle = async (newValue: boolean) => {
     if (newValue) {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!hasHardware || !isEnrolled) {
-        // Menampilkan peringatan kustom apabila perangkat tidak mendukung biometrik
         setAlertConfig({
           visible: true,
           title: 'Sensor Tidak Ditemukan',
-          message: 'Perangkat Anda tidak mendukung pemindai wajah atau sidik jari untuk mengaktifkan fitur ini.',
+          message: 'Perangkat Anda tidak mendukung pemindai wajah atau sidik jari.',
           type: 'warning'
         });
         return;
       }
 
       const auth = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Pindai sidik jari Anda untuk mengaktifkan keamanan Biometrik NutriVue.',
+        promptMessage: 'Pindai sidik jari Anda untuk mengaktifkan keamanan Biometrik',
         fallbackLabel: 'Gunakan Sandi HP',
         cancelLabel: 'Batal'
       });
 
       if (auth.success) {
         setBiometricEnabled(true);
-        // Menyimpan preferensi biometrik ke dalam memori lokal perangkat
         await AsyncStorage.setItem('biometricEnabled', 'true'); 
-        
-        // Menampilkan pemberitahuan sukses menggunakan dialog kustom
         setAlertConfig({
           visible: true,
           title: 'Keamanan Ditingkatkan',
-          message: 'Autentikasi Biometrik aktif. Selanjutnya Anda wajib menggunakan sidik jari saat membuka aplikasi.',
+          message: 'Autentikasi Biometrik aktif.',
           type: 'success'
         });
       } else {
@@ -151,17 +142,49 @@ export default function SecurityScreen({ navigation }: any) {
       }
     } else {
       setBiometricEnabled(false);
-      // Menghapus preferensi biometrik dari memori lokal perangkat
       await AsyncStorage.removeItem('biometricEnabled'); 
     }
   };
 
-  // Memuat pengaturan keamanan saat halaman dibuka
+  const syncPrivacySetting = async (type: string, value: boolean) => {
+    if (type === 'medical') setMedicalVisibility(value);
+    if (type === 'location') setLocationTracking(value);
+
+    try {
+      const payload = {
+        visibilitas_medis: type === 'medical' ? value : medicalVisibility,
+        pelacakan_lokasi: type === 'location' ? value : locationTracking
+      };
+      await api.post('/update-privacy', payload);
+    } catch (error) {
+      if (type === 'medical') setMedicalVisibility(!value);
+      if (type === 'location') setLocationTracking(!value);
+      
+      setAlertConfig({
+        visible: true,
+        title: 'Sinkronisasi Gagal',
+        message: 'Pastikan koneksi internet Anda stabil untuk menyimpan pengaturan ke peladen.',
+        type: 'error'
+      });
+    }
+  };
+
   useEffect(() => {
     const loadSettings = async () => {
       const bioState = await AsyncStorage.getItem('biometricEnabled');
       if (bioState === 'true') {
         setBiometricEnabled(true);
+      }
+      
+      try {
+        const response = await api.get('/health');
+        if (response.data && response.data.data) {
+          const userData = response.data.data;
+          if (userData.visibilitas_medis !== undefined) setMedicalVisibility(userData.visibilitas_medis);
+          if (userData.pelacakan_lokasi !== undefined) setLocationTracking(userData.pelacakan_lokasi);
+        }
+      } catch (error) {
+        console.warn('Gagal menarik data preferensi pengguna');
       }
     };
     loadSettings();
@@ -195,26 +218,18 @@ export default function SecurityScreen({ navigation }: any) {
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Metode Akses</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
           <ActionRow icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" onPress={() => {}} />
-          
-          {/* Komponen sakelar untuk mengaktifkan fitur biometrik */}
-          <ToggleRow 
-            icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" 
-            value={biometricEnabled} onValueChange={handleBiometricToggle} 
-          />
-          
+          <ToggleRow icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" value={biometricEnabled} onValueChange={handleBiometricToggle} />
           <ToggleRow icon="keypad" title="Kunci Aplikasi PIN" subtitle="Minta PIN setiap membuka aplikasi" color="amber" value={pinEnabled} onValueChange={setPinEnabled} isLast={true} />
         </View>
 
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Kontrol Privasi</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
-          <ToggleRow icon="medical" title="Visibilitas Data Medis" subtitle="Izinkan mitra melihat pantangan alergi Anda" color="rose" value={medicalVisibility} onValueChange={setMedicalVisibility} />
-          <ToggleRow icon="location" title="Pelacakan Lokasi Distribusi" subtitle="Simpan riwayat lokasi pengambilan gizi" color="sky" value={locationTracking} onValueChange={setLocationTracking} isLast={true} />
+          <ToggleRow icon="medical" title="Visibilitas Data Medis" subtitle="Izinkan mitra melihat pantangan alergi Anda" color="rose" value={medicalVisibility} onValueChange={(val: boolean) => syncPrivacySetting('medical', val)} />
+          <ToggleRow icon="location" title="Pelacakan Lokasi Distribusi" subtitle="Simpan riwayat lokasi pengambilan gizi" color="sky" value={locationTracking} onValueChange={(val: boolean) => syncPrivacySetting('location', val)} isLast={true} />
         </View>
 
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Perangkat Tertaut</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8">
-          
-          {/* Tampilan daftar perangkat yang sedang digunakan */}
           <View className="flex-row items-center border-b border-gray-50 pb-5 mb-5">
             <View className="w-14 h-14 bg-slate-50 rounded-2xl items-center justify-center mr-4 shrink-0 border border-slate-100">
               <Ionicons name={Platform.OS === 'ios' ? 'phone-portrait' : 'phone-portrait-outline'} size={28} color="#64748B" />
@@ -232,7 +247,6 @@ export default function SecurityScreen({ navigation }: any) {
               </View>
             </View>
           </View>
-          
           <TouchableOpacity className="flex-row items-center justify-center py-3 bg-red-50 active:bg-red-100 rounded-xl border border-red-100">
             <Ionicons name="log-out-outline" size={18} color="#EF4444" style={{ marginRight: 6 }} />
             <Text className="text-red-600 font-bold text-sm">Keluar dari Semua Perangkat</Text>
@@ -241,7 +255,6 @@ export default function SecurityScreen({ navigation }: any) {
 
       </ScrollView>
 
-      {/* Komponen dialog kustom yang dirender di lapisan teratas */}
       <CustomAlert 
         visible={alertConfig.visible}
         title={alertConfig.title}
