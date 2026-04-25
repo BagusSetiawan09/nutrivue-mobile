@@ -53,7 +53,6 @@ export default function SecurityScreen({ navigation }: any) {
   const [isLocating, setIsLocating] = useState(false);
   const [deviceName, setDeviceName] = useState('Mendeteksi Perangkat...');
 
-  // Pengaturan kotak dialog utama
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
     title: '',
@@ -61,7 +60,6 @@ export default function SecurityScreen({ navigation }: any) {
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
 
-  // Pengaturan status untuk konfigurasi pembuatan kode sandi
   const [isPinModalVisible, setIsPinModalVisible] = useState(false);
   const [pinStep, setPinStep] = useState(1);
   const [tempPin, setTempPin] = useState('');
@@ -176,7 +174,6 @@ export default function SecurityScreen({ navigation }: any) {
     }
   };
 
-  // Fungsi pengatur status aktivasi kode aplikasi
   const handlePinToggle = async (newValue: boolean) => {
     if (newValue) {
       setTempPin('');
@@ -190,7 +187,6 @@ export default function SecurityScreen({ navigation }: any) {
     }
   };
 
-  // Fungsi validasi masukan angka dari pengguna
   const handlePinInput = async (text: string) => {
     if (pinStep === 1) {
       setTempPin(text);
@@ -270,8 +266,6 @@ export default function SecurityScreen({ navigation }: any) {
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
           <ActionRow icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" onPress={() => {}} />
           <ToggleRow icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" value={biometricEnabled} onValueChange={handleBiometricToggle} />
-          
-          {/* Komponen sakelar kode aplikasi yang dihubungkan ke fungsi pengaturan */}
           <ToggleRow icon="keypad" title="Kunci Aplikasi PIN" subtitle="Minta sandi angka setiap membuka aplikasi" color="amber" value={pinEnabled} onValueChange={handlePinToggle} isLast={true} />
         </View>
 
@@ -308,7 +302,6 @@ export default function SecurityScreen({ navigation }: any) {
 
       </ScrollView>
 
-      {/* Komponen pelapis untuk antarmuka pembuatan sandi */}
       <Modal visible={isPinModalVisible} transparent animationType="slide">
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-white rounded-t-3xl p-8 pb-12 h-2/3 shadow-2xl items-center">
@@ -336,6 +329,7 @@ export default function SecurityScreen({ navigation }: any) {
               value={pinStep === 1 ? tempPin : confirmPin}
               onChangeText={handlePinInput}
               autoFocus
+              caretHidden={true}
             />
             
             {pinError && <Text className="text-red-500 mt-4 font-medium">Sandi tidak cocok silakan coba lagi</Text>}

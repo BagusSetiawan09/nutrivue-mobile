@@ -4,10 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/**
- * Komponen layar pelindung aplikasi
- * Meminta pengguna memasukkan kode identitas rahasia sebelum mengakses sistem utama
- */
 export default function PinUnlockScreen({ navigation }: any) {
   const [pin, setPin] = useState('');
   const [savedPin, setSavedPin] = useState('');
@@ -66,6 +62,7 @@ export default function PinUnlockScreen({ navigation }: any) {
           value={pin}
           onChangeText={handlePinChange}
           autoFocus
+          caretHidden={true}
         />
         {error && <Text className="text-red-500 mt-4 font-medium">Kode keamanan tidak valid</Text>}
       </View>
