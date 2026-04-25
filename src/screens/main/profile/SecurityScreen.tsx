@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-// ⚡ IMPORT SENJATA RADAR EXPO
 import * as Location from 'expo-location';
-import * as Device from 'expo-device'; // ⚡ IMPORT PEMBACA PERANGKAT
+import * as Device from 'expo-device';
+// ⚡ IMPORT SENJATA BIOMETRIK
+import * as LocalAuthentication from 'expo-local-authentication';
 
 const ToggleRow = ({ icon, title, subtitle, color, value, onValueChange, isLast }: any) => (
   <View className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
@@ -40,7 +41,8 @@ const ActionRow = ({ icon, title, subtitle, color, isLast, onPress }: any) => (
 
 export default function SecurityScreen({ navigation }: any) {
   
-  const [biometricEnabled, setBiometricEnabled] = useState(true);
+  // Biometrik kita matikan dulu di awal agar bisa dites menyalakannya
+  const [biometricEnabled, setBiometricEnabled] = useState(false); 
   const [pinEnabled, setPinEnabled] = useState(true);
   const [medicalVisibility, setMedicalVisibility] = useState(true);
   
@@ -48,17 +50,12 @@ export default function SecurityScreen({ navigation }: any) {
   const [cityName, setCityName] = useState('Mendeteksi...');
   const [isLocating, setIsLocating] = useState(false);
 
-  // MENGAMBIL NAMA PERANGKAT SECARA OTOMATIS
-  // Device.modelName akan mengembalikan "iPhone 13", "Redmi Note 11", dll.
   const [deviceName, setDeviceName] = useState('Mendeteksi Perangkat...');
 
+  // ⚡ LOGIKA NAMA PERANGKAT (FASE 1)
   useEffect(() => {
-    // 1. Ambil Nama Brand (Misal: xiaomi -> XIAOMI)
     const brand = Device.brand ? Device.brand.toUpperCase() : '';
-    // 2. Ambil Kode Pabrik (Misal: 2201117TY)
     const model = Device.modelName || 'PONSEL PINTAR';
-    
-    // 3. Gabungkan jadi identitas keamanan yang lebih informatif
     if (Platform.OS === 'ios') {
       setDeviceName(model);
     } else {
@@ -66,12 +63,12 @@ export default function SecurityScreen({ navigation }: any) {
     }
   }, []);
 
+  // ⚡ LOGIKA SATELIT GPS (FASE 1)
   useEffect(() => {
     (async () => {
       if (locationTracking) {
         setIsLocating(true);
         setCityName('Mencari satelit...');
-        
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setCityName('Akses Ditolak');
@@ -79,17 +76,14 @@ export default function SecurityScreen({ navigation }: any) {
           setIsLocating(false);
           return;
         }
-
         try {
           let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           let geocode = await Location.reverseGeocodeAsync({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude
           });
-
           if (geocode.length > 0) {
-            const city = geocode[0].city || geocode[0].subregion || 'Lokasi Ditemukan';
-            setCityName(city);
+            setCityName(geocode[0].city || geocode[0].subregion || 'Lokasi Ditemukan');
           } else {
             setCityName('Lokasi Tidak Dikenal');
           }
@@ -103,6 +97,39 @@ export default function SecurityScreen({ navigation }: any) {
       }
     })();
   }, [locationTracking]); 
+
+  // ⚡ LOGIKA SENSOR BIOMETRIK (FASE 2)
+  const handleBiometricToggle = async (newValue: boolean) => {
+    if (newValue) {
+      // Jika user ingin MENYALAKAN, kita tes dulu mesinnya
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert("Gagal", "Perangkat Anda tidak mendukung Sidik Jari/Face ID, atau Anda belum mendaftarkannya di pengaturan HP.");
+        return;
+      }
+
+      // Panggil sensor HP muncul ke layar
+      const auth = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Pindai sidik jari Anda untuk mengaktifkan keamanan Biometrik NutriVue.',
+        fallbackLabel: 'Gunakan Sandi HP',
+        cancelLabel: 'Batal'
+      });
+
+      // Jika sidik jari benar, nyalakan tombolnya
+      if (auth.success) {
+        setBiometricEnabled(true);
+        Alert.alert("Berhasil", "Autentikasi Biometrik berhasil diaktifkan!");
+      } else {
+        // Jika gagal/batal, biarkan tetap mati
+        setBiometricEnabled(false);
+      }
+    } else {
+      // Jika user ingin MEMATIKAN, langsung matikan saja
+      setBiometricEnabled(false);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -132,7 +159,13 @@ export default function SecurityScreen({ navigation }: any) {
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Metode Akses</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
           <ActionRow icon="key" title="Ubah Kata Sandi" subtitle="Perbarui kata sandi secara berkala" color="sky" onPress={() => {}} />
-          <ToggleRow icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" value={biometricEnabled} onValueChange={setBiometricEnabled} />
+          
+          {/* ⚡ TOGGLE BIOMETRIK DIPASANGKAN DENGAN FUNGSI BARU */}
+          <ToggleRow 
+            icon="finger-print" title="Autentikasi Biometrik" subtitle="Gunakan sidik jari atau pemindai wajah" color="emerald" 
+            value={biometricEnabled} onValueChange={handleBiometricToggle} 
+          />
+          
           <ToggleRow icon="keypad" title="Kunci Aplikasi PIN" subtitle="Minta PIN setiap membuka aplikasi" color="amber" value={pinEnabled} onValueChange={setPinEnabled} isLast={true} />
         </View>
 
@@ -145,36 +178,22 @@ export default function SecurityScreen({ navigation }: any) {
         <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Perangkat Tertaut</Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8">
           
-          {/* ⚡ LAYOUT PREMIUM BARU: Vertikal, Clean, Enterprise Look */}
           <View className="flex-row items-center border-b border-gray-50 pb-5 mb-5">
-            
-            {/* Ikon Perangkat */}
             <View className="w-14 h-14 bg-slate-50 rounded-2xl items-center justify-center mr-4 shrink-0 border border-slate-100">
               <Ionicons name={Platform.OS === 'ios' ? 'phone-portrait' : 'phone-portrait-outline'} size={28} color="#64748B" />
             </View>
-
-            {/* Informasi Bertingkat */}
             <View className="flex-1 justify-center">
-              <Text className="text-emerald-500 font-bold text-[10px] uppercase tracking-wider mb-1">
-                Sedang Digunakan Saat Ini
-              </Text>
-              
-              <Text className="text-gray-900 font-black text-base uppercase tracking-wider mb-1.5" numberOfLines={1}>
-                {deviceName}
-              </Text>
-              
+              <Text className="text-emerald-500 font-bold text-[10px] uppercase tracking-wider mb-1">Sedang Digunakan Saat Ini</Text>
+              <Text className="text-gray-900 font-black text-base uppercase tracking-wider mb-1.5" numberOfLines={1}>{deviceName}</Text>
               <View className="flex-row items-center">
                 <Ionicons name="location" size={12} color={locationTracking ? '#0EA5E9' : '#9CA3AF'} style={{ marginRight: 4 }} />
                 {isLocating ? (
                   <ActivityIndicator size="small" color="#0EA5E9" style={{ transform: [{ scale: 0.7 }] }} />
                 ) : (
-                  <Text className={`text-[11px] font-bold ${locationTracking ? 'text-sky-600' : 'text-gray-400'}`} numberOfLines={1}>
-                    {cityName}
-                  </Text>
+                  <Text className={`text-[11px] font-bold ${locationTracking ? 'text-sky-600' : 'text-gray-400'}`} numberOfLines={1}>{cityName}</Text>
                 )}
               </View>
             </View>
-
           </View>
           
           <TouchableOpacity className="flex-row items-center justify-center py-3 bg-red-50 active:bg-red-100 rounded-xl border border-red-100">

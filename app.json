@@ -46,6 +46,12 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Izinkan $(PRODUCT_NAME) menggunakan lokasi Anda untuk melacak data distribusi gizi."
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Izinkan NutriVue menggunakan Face ID untuk mengamankan data medis dan akun Anda."
+        }
       ]
     ]
   }
