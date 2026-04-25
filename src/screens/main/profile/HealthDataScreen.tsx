@@ -61,10 +61,14 @@ export default function HealthDataScreen({ navigation }: any) {
         setBloodType(data.golongan_darah || '');
         setMedicalNotes(data.catatan_medis || '');
         
+        // JURUS ANTI-GAGAL: Tangkap data alergi entah bentuknya String atau Array
         if (data.alergi) {
           try {
-            const parsedAlergi = typeof data.alergi === 'string' ? JSON.parse(data.alergi) : data.alergi;
-            setAllergies(Array.isArray(parsedAlergi) ? parsedAlergi : []);
+            let parsed = data.alergi;
+            if (typeof parsed === 'string') {
+              parsed = JSON.parse(parsed);
+            }
+            setAllergies(Array.isArray(parsed) ? parsed : []);
           } catch (e) {
             setAllergies([]);
           }
@@ -86,7 +90,10 @@ export default function HealthDataScreen({ navigation }: any) {
 
   const handleAddAllergy = () => {
     if (newAllergy.trim() !== '') {
-      setAllergies([...allergies, newAllergy.trim()]);
+      // Cegah duplikasi
+      if (!allergies.includes(newAllergy.trim())) {
+        setAllergies([...allergies, newAllergy.trim()]);
+      }
       setNewAllergy(''); 
     }
   };
@@ -98,12 +105,23 @@ export default function HealthDataScreen({ navigation }: any) {
   const handleSaveChanges = async () => {
     setIsLoading(true);
     try {
+      // ⚡ FIX UX: Otomatis tambahkan ke array jika user lupa klik tombol Plus (+)
+      let finalAllergies = [...allergies];
+      if (newAllergy.trim() !== '') {
+        if (!finalAllergies.includes(newAllergy.trim())) {
+          finalAllergies.push(newAllergy.trim());
+        }
+        setNewAllergy('');
+        setAllergies(finalAllergies); // Render badge baru
+      }
+
       const payload = {
         berat_badan: weight !== '' ? parseFloat(weight) : null,
         tinggi_badan: height !== '' ? parseFloat(height) : null,
         golongan_darah: bloodType !== '' ? bloodType : null,
         catatan_medis: medicalNotes !== '' ? medicalNotes : null,
-        alergi: allergies
+        // ⚡ PAKSA JADI STRING agar Laravel tidak cerewet soal Array
+        alergi: JSON.stringify(finalAllergies) 
       };
 
       const response = await api.post('/profile/health', payload);
@@ -113,10 +131,8 @@ export default function HealthDataScreen({ navigation }: any) {
       }
     } catch (error: any) {
       console.log('[API Health] Error Asli dari Server:', error.response?.data || error.message);
-      
       const pesanErrorBackend = error.response?.data?.message || 'Gagal terhubung ke server/database.';
       alert(`Gagal Menyimpan:\n${pesanErrorBackend}`);
-      
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +169,7 @@ export default function HealthDataScreen({ navigation }: any) {
           className="flex-1 px-6 pt-6"
           contentContainerStyle={{ paddingBottom: 40 }}
           bounces={false}
-          keyboardShouldPersistTaps="handled" // ⚡ FIX: Memastikan ketukan pada tombol di dalam scrollview tidak terhalang keyboard
+          keyboardShouldPersistTaps="handled" 
         >
 
           <View className="bg-amber-50 p-4 rounded-2xl flex-row items-center border border-amber-100 mb-6 shadow-sm">

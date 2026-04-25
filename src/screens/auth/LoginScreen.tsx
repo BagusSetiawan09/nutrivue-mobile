@@ -6,29 +6,22 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView, 
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
+  ScrollView, // ⚡ DITAMBAHKAN: Untuk mengaktifkan fitur geser layar
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; 
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Brankas penyimpanan lokal
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 
-// Import API dan Komponen
 import api from '../../config/api'; 
 import CustomAlert from '../../components/CustomAlert';
 
-/**
- * Komponen utama untuk autentikasi masuk pengguna.
- * Menggunakan arsitektur fungsional dengan hooks untuk manajemen state.
- */
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // State Manajemen untuk Custom Alert
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
     title: '',
@@ -39,11 +32,7 @@ export default function LoginScreen({ navigation }: any) {
 
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
-  /**
-   * Fungsi inti untuk memproses Login ke Backend
-   */
   const handleLogin = async () => {
-    // 1. Validasi Input Kosong
     if (!email.trim() || !password.trim()) {
       setAlertConfig({
         visible: true,
@@ -56,22 +45,17 @@ export default function LoginScreen({ navigation }: any) {
     }
 
     setIsLoading(true);
-    Keyboard.dismiss(); // Tutup keyboard saat loading
 
     try {
-      // 2. Kirim data ke API Laravel
       const response = await api.post('/login', {
         email: email,
         password: password
       });
 
-      // 3. Jika Laravel bilang sukses
       if (response.data.status === 'success') {
         await AsyncStorage.setItem('userToken', response.data.token);
-        
         await AsyncStorage.setItem('user', JSON.stringify(response.data.data));
 
-        // Tampilkan Alert Sukses
         setAlertConfig({
           visible: true,
           title: 'Login Berhasil!',
@@ -85,9 +69,7 @@ export default function LoginScreen({ navigation }: any) {
       }
 
     } catch (error: any) {
-      // 4. Tangkap Error (Password salah, email tidak ada, dll)
       const errorMessage = error.response?.data?.message || 'Terjadi kesalahan jaringan saat mencoba masuk.';
-      
       setAlertConfig({
         visible: true,
         title: 'Login Gagal',
@@ -103,119 +85,102 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       
-      {/* Menangani penutupan keyboard saat area luar input ditekan */}
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1 justify-center px-8"
+      {/* ⚡ PERBAIKAN STRUKTUR: KeyboardAvoidingView langsung membungkus ScrollView */}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+      >
+        {/* ⚡ JURUS SAKTI SCROLL: 
+            - flexGrow: 1 memastikan konten mengisi layar minimal sepenuh layar.
+            - keyboardShouldPersistTaps="handled" menutup keyboard otomatis jika area kosong ditekan, tanpa memblokir scroll.
+        */}
+        <ScrollView 
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled" 
         >
-          
-          {/* Bagian Identitas Visual */}
-          <View className="mb-12">
-            <Text className="text-4xl font-bold text-gray-900 tracking-tight mb-3">
-              Selamat Datang.
-            </Text>
-            <Text className="text-base text-gray-500 leading-relaxed">
-              Silakan masuk dengan akun Nourish Anda untuk melihat jadwal distribusi hari ini.
-            </Text>
-          </View>
-
-          {/* Bagian Input Kredensial */}
-          <View className="space-y-4">
+          <View className="flex-1 justify-center px-8 py-10">
             
-            {/* Input Identitas Email */}
-            <View>
-              <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">
-                Alamat Email
+            <View className="mb-12">
+              <Text className="text-4xl font-bold text-gray-900 tracking-tight mb-3">
+                Selamat Datang.
               </Text>
-              <TextInput
-                className="bg-white border border-gray-100 rounded-2xl px-5 py-4 text-base text-gray-900 shadow-sm"
-                placeholder="Masukkan alamat email"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                editable={!isLoading}
-              />
+              <Text className="text-base text-gray-500 leading-relaxed">
+                Silakan masuk dengan akun Nourish Anda untuk melihat jadwal distribusi hari ini.
+              </Text>
             </View>
 
-            {/* Input Kata Sandi dengan proteksi visibilitas */}
-            <View className="mt-4">
-              <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">
-                Kata Sandi
-              </Text>
-              <View className="relative justify-center">
+            <View className="space-y-4">
+              <View>
+                <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">Alamat Email</Text>
                 <TextInput
-                  className="bg-white border border-gray-100 rounded-2xl pl-5 pr-12 py-4 text-base text-gray-900 shadow-sm"
-                  placeholder="Masukkan kata sandi"
+                  className="bg-white border border-gray-100 rounded-2xl px-5 py-4 text-base text-gray-900 shadow-sm"
+                  placeholder="Masukkan alamat email"
                   placeholderTextColor="#9CA3AF"
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={setPassword}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
                   editable={!isLoading}
                 />
-                
-                {/* Toggle visibilitas untuk kenyamanan pengguna */}
-                <TouchableOpacity 
-                  className="absolute right-4 p-1"
-                  onPress={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  <Ionicons 
-                    name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                    size={22} 
-                    color="#9CA3AF" 
+              </View>
+
+              <View className="mt-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">Kata Sandi</Text>
+                <View className="relative justify-center">
+                  <TextInput
+                    className="bg-white border border-gray-100 rounded-2xl pl-5 pr-12 py-4 text-base text-gray-900 shadow-sm"
+                    placeholder="Masukkan kata sandi"
+                    placeholderTextColor="#9CA3AF"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    editable={!isLoading}
                   />
+                  <TouchableOpacity 
+                    className="absolute right-4 p-1"
+                    onPress={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                  >
+                    <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={22} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                className="mt-4 flex-row justify-end"
+                onPress={() => navigation.navigate('ForgotPassword')}
+                disabled={isLoading}
+              >
+                <Text className="text-primary font-medium text-sm">Lupa Kata Sandi?</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View className="mt-10">
+              <TouchableOpacity 
+                onPress={handleLogin}
+                disabled={isLoading}
+                className={`${isLoading ? 'bg-sky-400' : 'bg-primary active:bg-sky-700'} rounded-2xl py-4 shadow-sm items-center justify-center`}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text className="text-white font-bold text-lg">Masuk</Text>
+                )}
+              </TouchableOpacity>
+
+              <View className="flex-row justify-center mt-8">
+                <Text className="text-gray-500 text-base">Belum punya akun? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading}>
+                  <Text className="text-primary font-bold text-base">Daftar</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Navigasi pemulihan akun */}
-            <TouchableOpacity 
-              className="mt-4 flex-row justify-end"
-              onPress={() => navigation.navigate('ForgotPassword')}
-              disabled={isLoading}
-            >
-              <Text className="text-primary font-medium text-sm">
-                Lupa Kata Sandi?
-              </Text>
-            </TouchableOpacity>
           </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-          {/* Bagian Aksi Utama dan Registrasi */}
-          <View className="mt-10">
-            <TouchableOpacity 
-              onPress={handleLogin}
-              disabled={isLoading}
-              className={`${isLoading ? 'bg-sky-400' : 'bg-primary active:bg-sky-700'} rounded-2xl py-4 shadow-sm items-center justify-center`}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Text className="text-white font-bold text-lg">
-                  Masuk
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Redirect ke alur pendaftaran pengguna baru */}
-            <View className="flex-row justify-center mt-8">
-              <Text className="text-gray-500 text-base">
-                Belum punya akun?{' '}
-              </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading}>
-                <Text className="text-primary font-bold text-base">
-                  Daftar
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
-
-      {/* Komponen Custom Alert - Ditempatkan di lapisan paling atas */}
       <CustomAlert 
         visible={alertConfig.visible}
         title={alertConfig.title}

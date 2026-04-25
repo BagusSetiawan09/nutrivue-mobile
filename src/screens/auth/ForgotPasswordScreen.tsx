@@ -6,37 +6,24 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView, 
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; 
 
-/**
- * Komponen pemulihan kata sandi pengguna.
- * Menggunakan alur Multi-Step Wizard dalam satu tampilan (Email > OTP > Sandi Baru).
- */
 export default function ForgotPasswordScreen({ navigation }: any) {
-  // Manajemen alur tampilan: 1 = Email, 2 = OTP, 3 = Sandi Baru
   const [step, setStep] = useState(1);
 
-  // State Identitas dan Validasi
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
 
-  // State Verifikasi Keamanan
   const [otp, setOtp] = useState('');
 
-  // State Kredensial Baru
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  /**
-   * Menangani validasi email dan deteksi kesalahan pengetikan domain.
-   */
   const handleEmailChange = (text: string) => {
     setEmail(text);
     if (text.trim() === '') {
@@ -57,13 +44,9 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     setEmailError('');
   };
 
-  // Logika validasi tombol berdasarkan kriteria keamanan
   const isEmailValid = email.length > 0 && emailError === '';
   const isPasswordMatch = password === confirmPassword && password.length >= 8;
 
-  /**
-   * Bagian 1: Permintaan pengiriman kode pemulihan melalui email.
-   */
   const renderStep1 = () => (
     <View className="flex-1 mt-6">
       <View className="mb-10">
@@ -100,9 +83,6 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     </View>
   );
 
-  /**
-   * Bagian 2: Verifikasi kepemilikan akun melalui kode 4 digit.
-   */
   const renderStep2 = () => (
     <View className="flex-1 mt-6">
       <View className="mb-10">
@@ -139,9 +119,6 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     </View>
   );
 
-  /**
-   * Bagian 3: Pembaruan kredensial dengan kata sandi baru.
-   */
   const renderStep3 = () => (
     <View className="flex-1 mt-6">
       <View className="mb-10">
@@ -190,32 +167,37 @@ export default function ForgotPasswordScreen({ navigation }: any) {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-            <View className="flex-1 px-8 py-10">
-              
-              {/* Navigasi kembali dinamis berdasarkan langkah saat ini */}
-              <TouchableOpacity 
-                onPress={() => {
-                  if (step === 1) navigation.goBack();
-                  if (step === 2) setStep(1);
-                  if (step === 3) setStep(2);
-                }} 
-                className="mb-4"
-              >
-                <Ionicons name="arrow-back" size={24} color="#111827" />
-              </TouchableOpacity>
+      
+      {/* ⚡ PERBAIKAN: Menghapus TouchableWithoutFeedback untuk mencegah matinya fitur scroll saat mengetik */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        
+        {/* ⚡ JURUS SAKTI SCROLL: paddingBottom memastikan form terdalam (step 3) bisa di-scroll dengan leluasa */}
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="flex-1 px-8 py-10">
+            
+            <TouchableOpacity 
+              onPress={() => {
+                if (step === 1) navigation.goBack();
+                if (step === 2) setStep(1);
+                if (step === 3) setStep(2);
+              }} 
+              className="mb-4"
+            >
+              <Ionicons name="arrow-back" size={24} color="#111827" />
+            </TouchableOpacity>
 
-              {/* Tampilan Konten Dinamis */}
-              {step === 1 && renderStep1()}
-              {step === 2 && renderStep2()}
-              {step === 3 && renderStep3()}
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
 
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      
     </SafeAreaView>
   );
 }

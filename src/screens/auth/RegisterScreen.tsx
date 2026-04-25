@@ -34,7 +34,6 @@ export default function RegisterScreen({ navigation }: any) {
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
-
   const [isLoading, setIsLoading] = useState(false);
 
   const [alertConfig, setAlertConfig] = useState({
@@ -49,29 +48,25 @@ export default function RegisterScreen({ navigation }: any) {
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
-    
     if (text.trim() === '') {
       setEmailError('');
       return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(text)) {
       setEmailError('Format email belum lengkap');
       return;
     }
-
     const domain = text.split('@')[1]?.toLowerCase();
     const commonTypos = ['gamail.com', 'gmil.com', 'gmai.com', 'yaho.com', 'yahho.com'];
-    
     if (commonTypos.includes(domain)) {
       setEmailError(`Sepertinya typo. Apakah maksud Anda @${domain.startsWith('y') ? 'yahoo' : 'gmail'}.com?`);
       return;
     }
-
     setEmailError('');
   };
 
+  // Logic Modal Picker
   const [visible, setVisible] = useState(false); 
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current; 
   const opacity = useRef(new Animated.Value(0)).current; 
@@ -119,21 +114,12 @@ export default function RegisterScreen({ navigation }: any) {
 
   const handleRegister = async () => {
     setIsLoading(true); 
-    
     try {
       const payload = {
-        name: name,
-        email: email,
-        password: password,
-        kategori: kategori,
-        tempat_lahir: tempatLahir,
-        tanggal_lahir: tanggalLahirLabel,
-        alamat: alamat,
-        phone: phone,
+        name, email, password, kategori, tempat_lahir: tempatLahir,
+        tanggal_lahir: tanggalLahirLabel, alamat, phone,
       };
-
       const response = await api.post('/register', payload);
-
       if (response.data.status === 'success') {
         setAlertConfig({
           visible: true,
@@ -146,19 +132,10 @@ export default function RegisterScreen({ navigation }: any) {
           },
         });
       }
-
     } catch (error: any) {
-      console.log('=== ERROR JARINGAN / VALIDASI ===');
-      
-      // Mengambil pesan error dari Laravel Validator (422) atau error server
       const errorMessage = error.response?.data?.message || 'Terjadi kesalahan jaringan. Pastikan koneksi internet stabil.';
-      
       setAlertConfig({
-        visible: true,
-        title: 'Pendaftaran Gagal',
-        message: errorMessage,
-        type: 'error',
-        onConfirm: closeAlert,
+        visible: true, title: 'Pendaftaran Gagal', message: errorMessage, type: 'error', onConfirm: closeAlert,
       });
     } finally {
       setIsLoading(false);
@@ -168,8 +145,13 @@ export default function RegisterScreen({ navigation }: any) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View className="flex-1 justify-center px-8 py-10">
+        {/* ⚡ PERBAIKAN: Menambahkan paddingBottom: 60 agar pengguna bisa nge-scroll mentok sampai bawah tombol */}
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }} 
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="flex-1 px-8 py-10">
             
             <View className="mb-8">
               <TouchableOpacity onPress={() => navigation.goBack()} className="mb-4">
@@ -288,12 +270,12 @@ export default function RegisterScreen({ navigation }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Modal Picker Tanggal Lahir (Disembunyikan untuk menyingkat tempat, biarkan utuh seperti aslinya) */}
       <Modal visible={visible} transparent animationType="none">
         <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
           <Animated.View style={{ opacity }} className="flex-1 bg-black/50">
             <TouchableOpacity className="flex-1" activeOpacity={1} onPress={() => togglePicker(false)} />
           </Animated.View>
-          
           <Animated.View style={{ transform: [{ translateY }] }} className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl pt-6 pb-12 px-6 shadow-2xl h-[410px]">
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-xl font-bold text-gray-900 flex-1 text-center ml-10">Pilih Tanggal Lahir</Text>
