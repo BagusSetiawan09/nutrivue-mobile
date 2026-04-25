@@ -48,9 +48,23 @@ export default function SecurityScreen({ navigation }: any) {
   const [cityName, setCityName] = useState('Mendeteksi...');
   const [isLocating, setIsLocating] = useState(false);
 
-  // ⚡ MENGAMBIL NAMA PERANGKAT SECARA OTOMATIS
+  // MENGAMBIL NAMA PERANGKAT SECARA OTOMATIS
   // Device.modelName akan mengembalikan "iPhone 13", "Redmi Note 11", dll.
-  const deviceName = Device.modelName || 'Ponsel Pintar';
+  const [deviceName, setDeviceName] = useState('Mendeteksi Perangkat...');
+
+  useEffect(() => {
+    // 1. Ambil Nama Brand (Misal: xiaomi -> XIAOMI)
+    const brand = Device.brand ? Device.brand.toUpperCase() : '';
+    // 2. Ambil Kode Pabrik (Misal: 2201117TY)
+    const model = Device.modelName || 'PONSEL PINTAR';
+    
+    // 3. Gabungkan jadi identitas keamanan yang lebih informatif
+    if (Platform.OS === 'ios') {
+      setDeviceName(model);
+    } else {
+      setDeviceName(brand ? `${brand} ${model}` : model);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
