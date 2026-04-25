@@ -4,58 +4,58 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 /**
+ * ⚡ OPTIMASI STRUKTUR: 
+ * Subkomponen modular dipindah ke LUAR fungsi utama.
+ * Ini mencegah "Re-rendering" yang tidak perlu dan menghemat memori HP pengguna.
+ */
+const ToggleRow = ({ icon, title, subtitle, color, value, onValueChange, isLast }: any) => (
+  <View className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
+    <View className={`w-10 h-10 rounded-xl items-center justify-center mr-4 bg-${color}-50`}>
+      <Ionicons name={icon} size={20} color={`#${color === 'sky' ? '0EA5E9' : color === 'rose' ? 'F43F5E' : color === 'emerald' ? '10B981' : color === 'amber' ? 'F59E0B' : '64748B'}`} />
+    </View>
+    <View className="flex-1 pr-4">
+      <Text className="text-gray-900 font-bold text-sm mb-0.5">{title}</Text>
+      <Text className="text-gray-400 text-[10px] leading-relaxed">{subtitle}</Text>
+    </View>
+    <Switch 
+      trackColor={{ false: "#E2E8F0", true: "#BAE6FD" }}
+      thumbColor={value ? "#0EA5E9" : "#F8FAFC"}
+      onValueChange={onValueChange}
+      value={value}
+    />
+  </View>
+);
+
+const ActionRow = ({ icon, title, subtitle, color, isLast, onPress }: any) => (
+  <TouchableOpacity 
+    onPress={onPress}
+    activeOpacity={0.7}
+    className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}
+  >
+    <View className={`w-10 h-10 rounded-xl items-center justify-center mr-4 bg-${color}-50`}>
+      <Ionicons name={icon} size={20} color={`#${color === 'sky' ? '0EA5E9' : color === 'rose' ? 'F43F5E' : color === 'emerald' ? '10B981' : color === 'amber' ? 'F59E0B' : '64748B'}`} />
+    </View>
+    <View className="flex-1">
+      <Text className="text-gray-900 font-bold text-sm mb-0.5">{title}</Text>
+      <Text className="text-gray-400 text-[10px] leading-relaxed">{subtitle}</Text>
+    </View>
+    <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+  </TouchableOpacity>
+);
+
+
+/**
  * Komponen antarmuka pengelolaan privasi dan keamanan akun pengguna
  */
 export default function SecurityScreen({ navigation }: any) {
   
   /**
-   * Manajemen status lokal untuk preferensi keamanan biometrik dan privasi
+   * ⚡ PERINTAH KOMANDAN: Semua status keamanan dan privasi diatur AKTIF (true) sejak awal.
    */
   const [biometricEnabled, setBiometricEnabled] = useState(true);
-  const [pinEnabled, setPinEnabled] = useState(false);
+  const [pinEnabled, setPinEnabled] = useState(true);           // Diubah menjadi true
   const [medicalVisibility, setMedicalVisibility] = useState(true);
-  const [locationTracking, setLocationTracking] = useState(false);
-
-  /**
-   * Subkomponen modular untuk menyajikan opsi konfigurasi berbasis sakelar
-   */
-  const ToggleRow = ({ icon, title, subtitle, color, value, onValueChange, isLast }: any) => (
-    <View className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
-      <View className={`w-10 h-10 rounded-xl items-center justify-center mr-4 bg-${color}-50`}>
-        <Ionicons name={icon} size={20} color={`#${color === 'sky' ? '0EA5E9' : color === 'rose' ? 'F43F5E' : color === 'emerald' ? '10B981' : color === 'amber' ? 'F59E0B' : '64748B'}`} />
-      </View>
-      <View className="flex-1 pr-4">
-        <Text className="text-gray-900 font-bold text-sm mb-0.5">{title}</Text>
-        <Text className="text-gray-400 text-[10px] leading-relaxed">{subtitle}</Text>
-      </View>
-      <Switch 
-        trackColor={{ false: "#E2E8F0", true: "#BAE6FD" }}
-        thumbColor={value ? "#0EA5E9" : "#F8FAFC"}
-        onValueChange={onValueChange}
-        value={value}
-      />
-    </View>
-  );
-
-  /**
-   * Subkomponen modular untuk menyajikan opsi navigasi atau aksi interaktif
-   */
-  const ActionRow = ({ icon, title, subtitle, color, isLast, onPress }: any) => (
-    <TouchableOpacity 
-      onPress={onPress}
-      activeOpacity={0.7}
-      className={`flex-row items-center py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}
-    >
-      <View className={`w-10 h-10 rounded-xl items-center justify-center mr-4 bg-${color}-50`}>
-        <Ionicons name={icon} size={20} color={`#${color === 'sky' ? '0EA5E9' : color === 'rose' ? 'F43F5E' : color === 'emerald' ? '10B981' : color === 'amber' ? 'F59E0B' : '64748B'}`} />
-      </View>
-      <View className="flex-1">
-        <Text className="text-gray-900 font-bold text-sm mb-0.5">{title}</Text>
-        <Text className="text-gray-400 text-[10px] leading-relaxed">{subtitle}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
-    </TouchableOpacity>
-  );
+  const [locationTracking, setLocationTracking] = useState(true); // Diubah menjadi true
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
