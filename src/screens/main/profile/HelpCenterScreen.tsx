@@ -68,15 +68,13 @@ export default function HelpCenterScreen({ navigation }: any) {
    * ⚡ FITUR AKTIF 2: Aksi kontak langsung (Deep Linking)
    */
   const handleWhatsApp = () => {
-    // Ganti nomor ini dengan nomor WhatsApp CS resmi Anda
-    const phoneNumber = '+6281234567890'; 
+    const phoneNumber = '+62895628894070'; 
     const message = 'Halo Tim Support NutriVue, saya membutuhkan bantuan terkait aplikasi.';
     Linking.openURL(`whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`)
       .catch(() => alert('Pastikan aplikasi WhatsApp sudah terinstal di perangkat Anda.'));
   };
 
   const handleEmail = () => {
-    // Ganti dengan email CS resmi Anda
     const email = 'support@nutrivueapp.com';
     const subject = 'Tiket Bantuan Pengguna NutriVue';
     Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}`)
