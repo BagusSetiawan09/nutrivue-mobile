@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, LayoutAnimation, UIManager, Platform } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, LayoutAnimation, UIManager, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -23,25 +23,38 @@ export default function HelpCenterScreen({ navigation }: any) {
   const faqData = [
     {
       id: 1,
-      question: 'Bagaimana cara memindai kode pengambilan gizi',
-      answer: 'Buka menu pemindai di halaman beranda lalu arahkan kamera perangkat Anda tepat ke arah kode matriks milik peserta Sistem akan memverifikasi data secara otomatis',
+      question: 'Bagaimana cara memindai kode pengambilan gizi?',
+      answer: 'Buka menu pemindai di halaman beranda lalu arahkan kamera perangkat Anda tepat ke arah kode matriks milik peserta. Sistem akan memverifikasi data secara otomatis.',
     },
     {
       id: 2,
-      question: 'Apa yang harus dilakukan jika kode ditolak sistem',
-      answer: 'Penolakan biasanya terjadi jika kode telah kedaluwarsa atau jatah gizi sudah diambil sebelumnya Pastikan peserta memperbarui halaman aplikasi mereka untuk mendapatkan kode terbaru',
+      question: 'Apa yang harus dilakukan jika kode ditolak sistem?',
+      answer: 'Penolakan biasanya terjadi jika kode telah kedaluwarsa atau jatah gizi sudah diambil sebelumnya. Pastikan peserta memperbarui halaman aplikasi mereka untuk mendapatkan kode terbaru.',
     },
     {
       id: 3,
-      question: 'Cara memperbarui informasi alergi medis',
-      answer: 'Navigasikan ke menu Profil lalu pilih opsi Data Kesehatan Anda dapat menyesuaikan indikator alergi dan preferensi diet di halaman tersebut',
+      question: 'Cara memperbarui informasi alergi medis?',
+      answer: 'Navigasikan ke menu Profil lalu pilih opsi Data Kesehatan. Anda dapat menyesuaikan indikator alergi dan preferensi diet di halaman tersebut.',
     },
     {
       id: 4,
-      question: 'Apakah aplikasi membutuhkan koneksi internet terus menerus',
-      answer: 'Benar sekali NutriVue membutuhkan konektivitas internet yang stabil untuk melakukan sinkronisasi data distribusi dan verifikasi kode peserta secara waktu nyata',
+      question: 'Apakah aplikasi membutuhkan koneksi internet terus menerus?',
+      answer: 'Benar sekali. NutriVue membutuhkan konektivitas internet yang stabil untuk melakukan sinkronisasi data distribusi dan verifikasi kode peserta secara waktu nyata.',
     }
   ];
+
+  /**
+   * ⚡ FITUR AKTIF 1: Filter pencarian pintar
+   */
+  const filteredFaqs = useMemo(() => {
+    if (!searchQuery.trim()) return faqData;
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    return faqData.filter(
+      (faq) => 
+        faq.question.toLowerCase().includes(lowerCaseQuery) || 
+        faq.answer.toLowerCase().includes(lowerCaseQuery)
+    );
+  }, [searchQuery]);
 
   /**
    * Prosedur pemicu animasi pembukaan dan penutupan panel pertanyaan
@@ -52,11 +65,31 @@ export default function HelpCenterScreen({ navigation }: any) {
   };
 
   /**
+   * ⚡ FITUR AKTIF 2: Aksi kontak langsung (Deep Linking)
+   */
+  const handleWhatsApp = () => {
+    // Ganti nomor ini dengan nomor WhatsApp CS resmi Anda
+    const phoneNumber = '+6281234567890'; 
+    const message = 'Halo Tim Support NutriVue, saya membutuhkan bantuan terkait aplikasi.';
+    Linking.openURL(`whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`)
+      .catch(() => alert('Pastikan aplikasi WhatsApp sudah terinstal di perangkat Anda.'));
+  };
+
+  const handleEmail = () => {
+    // Ganti dengan email CS resmi Anda
+    const email = 'support@nutrivueapp.com';
+    const subject = 'Tiket Bantuan Pengguna NutriVue';
+    Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}`)
+      .catch(() => alert('Tidak dapat membuka aplikasi Email klien.'));
+  };
+
+  /**
    * Subkomponen modular untuk menyajikan opsi kontak layanan pelanggan
    */
-  const ContactCard = ({ icon, title, subtitle, color }: any) => (
+  const ContactCard = ({ icon, title, subtitle, color, onPressAction }: any) => (
     <TouchableOpacity 
       activeOpacity={0.7}
+      onPress={onPressAction}
       className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-1 ml-2 mr-2 items-center"
     >
       <View className={`w-12 h-12 rounded-full items-center justify-center mb-3 bg-${color}-50`}>
@@ -108,53 +141,73 @@ export default function HelpCenterScreen({ navigation }: any) {
               placeholderTextColor="#9CA3AF"
               className="flex-1 text-sm font-medium text-gray-900"
             />
+            {/* Tombol silang untuk membersihkan pencarian */}
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
         {/* Panel opsi komunikasi langsung dengan tim dukungan */}
         <Text className="text-sm font-bold text-gray-900 mb-4 ml-2 uppercase tracking-wider">Hubungi Kami</Text>
         <View className="flex-row justify-between mb-8 -mx-2">
-          <ContactCard icon="chatbubbles" title="Chat Langsung" subtitle="Respon cepat via pesan" color="emerald" />
-          <ContactCard icon="mail" title="Kirim Tiket" subtitle="Laporan teknis mendetail" color="sky" />
+          <ContactCard icon="chatbubbles" title="Chat Langsung" subtitle="Respon cepat via pesan" color="emerald" onPressAction={handleWhatsApp} />
+          <ContactCard icon="mail" title="Kirim Tiket" subtitle="Laporan teknis mendetail" color="sky" onPressAction={handleEmail} />
         </View>
 
         {/* Daftar pertanyaan interaktif berbasis akordion */}
         <Text className="text-sm font-bold text-gray-900 mb-4 ml-2 uppercase tracking-wider">Pertanyaan Populer</Text>
-        <View className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-2 mb-8">
-          {faqData.map((faq, index) => {
-            const isExpanded = expandedId === faq.id;
-            const isLast = index === faqData.length - 1;
+        
+        {filteredFaqs.length === 0 ? (
+          // ⚡ Tampilan jika pencarian tidak membuahkan hasil
+          <View className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-8 items-center mb-8">
+            <View className="w-16 h-16 bg-gray-50 rounded-full items-center justify-center mb-4">
+              <Ionicons name="document-text-outline" size={32} color="#9CA3AF" />
+            </View>
+            <Text className="text-gray-900 font-bold text-base mb-1 text-center">Panduan Tidak Ditemukan</Text>
+            <Text className="text-gray-500 text-xs text-center leading-relaxed">
+              Kami tidak dapat menemukan jawaban untuk "{searchQuery}". Silakan gunakan fitur Hubungi Kami di atas.
+            </Text>
+          </View>
+        ) : (
+          <View className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-2 mb-8">
+            {filteredFaqs.map((faq, index) => {
+              const isExpanded = expandedId === faq.id;
+              const isLast = index === filteredFaqs.length - 1;
 
-            return (
-              <View key={faq.id} className={`overflow-hidden ${!isLast ? 'border-b border-gray-50' : ''}`}>
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => toggleExpand(faq.id)}
-                  className="flex-row items-center justify-between p-4"
-                >
-                  <Text className={`flex-1 pr-4 text-sm font-bold ${isExpanded ? 'text-primary' : 'text-gray-900'}`}>
-                    {faq.question}
-                  </Text>
-                  <View className={`w-8 h-8 rounded-full items-center justify-center ${isExpanded ? 'bg-sky-50' : 'bg-gray-50'}`}>
-                    <Ionicons 
-                      name={isExpanded ? "chevron-up" : "chevron-down"} 
-                      size={16} 
-                      color={isExpanded ? "#0EA5E9" : "#9CA3AF"} 
-                    />
-                  </View>
-                </TouchableOpacity>
-                
-                {isExpanded && (
-                  <View className="px-4 pb-5 pt-1">
-                    <Text className="text-gray-500 text-xs leading-loose">
-                      {faq.answer}
+              return (
+                <View key={faq.id} className={`overflow-hidden ${!isLast ? 'border-b border-gray-50' : ''}`}>
+                  <TouchableOpacity 
+                    activeOpacity={0.7}
+                    onPress={() => toggleExpand(faq.id)}
+                    className="flex-row items-center justify-between p-4"
+                  >
+                    <Text className={`flex-1 pr-4 text-sm font-bold ${isExpanded ? 'text-primary' : 'text-gray-900'}`}>
+                      {faq.question}
                     </Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
+                    <View className={`w-8 h-8 rounded-full items-center justify-center ${isExpanded ? 'bg-sky-50' : 'bg-gray-50'}`}>
+                      <Ionicons 
+                        name={isExpanded ? "chevron-up" : "chevron-down"} 
+                        size={16} 
+                        color={isExpanded ? "#0EA5E9" : "#9CA3AF"} 
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  
+                  {isExpanded && (
+                    <View className="px-4 pb-5 pt-1">
+                      <Text className="text-gray-500 text-xs leading-loose">
+                        {faq.answer}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* Informasi tambahan mengenai versi perangkat lunak */}
         <View className="items-center mt-2">
