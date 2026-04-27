@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, LayoutAnimation, UIManager, Platform, Linking } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, LayoutAnimation, UIManager, Platform, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../../../config/api';
 
 /** Konfigurasi animasi tata letak untuk antarmuka Android */
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -16,45 +17,41 @@ export default function HelpCenterScreen({ navigation }: any) {
   /** Status lokal untuk manajemen kata kunci pencarian dan interaksi akordion */
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  
+  // STATE DINAMIS UNTUK API
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  /**
-   * Basis data statis untuk pertanyaan yang sering diajukan
-   */
-  const faqData = [
-    {
-      id: 1,
-      question: 'Bagaimana cara memindai kode pengambilan gizi?',
-      answer: 'Buka menu pemindai di halaman beranda lalu arahkan kamera perangkat Anda tepat ke arah kode matriks milik peserta. Sistem akan memverifikasi data secara otomatis.',
-    },
-    {
-      id: 2,
-      question: 'Apa yang harus dilakukan jika kode ditolak sistem?',
-      answer: 'Penolakan biasanya terjadi jika kode telah kedaluwarsa atau jatah gizi sudah diambil sebelumnya. Pastikan peserta memperbarui halaman aplikasi mereka untuk mendapatkan kode terbaru.',
-    },
-    {
-      id: 3,
-      question: 'Cara memperbarui informasi alergi medis?',
-      answer: 'Navigasikan ke menu Profil lalu pilih opsi Data Kesehatan. Anda dapat menyesuaikan indikator alergi dan preferensi diet di halaman tersebut.',
-    },
-    {
-      id: 4,
-      question: 'Apakah aplikasi membutuhkan koneksi internet terus menerus?',
-      answer: 'Benar sekali. NutriVue membutuhkan konektivitas internet yang stabil untuk melakukan sinkronisasi data distribusi dan verifikasi kode peserta secara waktu nyata.',
+  // Tarik data saat layar pertama kali dibuka
+  useEffect(() => {
+    fetchFaqs();
+  }, []);
+
+  const fetchFaqs = async () => {
+    try {
+      const response = await api.get('/faqs');
+      if (response.data.status === 'success') {
+        setFaqs(response.data.data);
+      }
+    } catch (error) {
+      console.log('Gagal menarik data FAQ dari peladen', error);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
   /**
-   * ⚡ FITUR AKTIF 1: Filter pencarian pintar
+   *  FITUR AKTIF 1: Filter pencarian pintar menggunakan data dari API
    */
   const filteredFaqs = useMemo(() => {
-    if (!searchQuery.trim()) return faqData;
+    if (!searchQuery.trim()) return faqs;
     const lowerCaseQuery = searchQuery.toLowerCase();
-    return faqData.filter(
+    return faqs.filter(
       (faq) => 
         faq.question.toLowerCase().includes(lowerCaseQuery) || 
         faq.answer.toLowerCase().includes(lowerCaseQuery)
     );
-  }, [searchQuery]);
+  }, [searchQuery, faqs]);
 
   /**
    * Prosedur pemicu animasi pembukaan dan penutupan panel pertanyaan
@@ -65,7 +62,7 @@ export default function HelpCenterScreen({ navigation }: any) {
   };
 
   /**
-   * ⚡ FITUR AKTIF 2: Aksi kontak langsung (Deep Linking)
+   * FITUR AKTIF 2: Aksi kontak langsung (Deep Linking)
    */
   const handleWhatsApp = () => {
     const phoneNumber = '+62895628894070'; 
@@ -158,15 +155,18 @@ export default function HelpCenterScreen({ navigation }: any) {
         {/* Daftar pertanyaan interaktif berbasis akordion */}
         <Text className="text-sm font-bold text-gray-900 mb-4 ml-2 uppercase tracking-wider">Pertanyaan Populer</Text>
         
-        {filteredFaqs.length === 0 ? (
-          // ⚡ Tampilan jika pencarian tidak membuahkan hasil
+        {/*  Indikator Loading */}
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#0EA5E9" style={{ marginTop: 20 }} />
+        ) : filteredFaqs.length === 0 ? (
+          //  Tampilan jika pencarian tidak membuahkan hasil atau data kosong
           <View className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-8 items-center mb-8">
             <View className="w-16 h-16 bg-gray-50 rounded-full items-center justify-center mb-4">
               <Ionicons name="document-text-outline" size={32} color="#9CA3AF" />
             </View>
             <Text className="text-gray-900 font-bold text-base mb-1 text-center">Panduan Tidak Ditemukan</Text>
             <Text className="text-gray-500 text-xs text-center leading-relaxed">
-              Kami tidak dapat menemukan jawaban untuk "{searchQuery}". Silakan gunakan fitur Hubungi Kami di atas.
+              {searchQuery ? `Kami tidak dapat menemukan jawaban untuk "${searchQuery}".` : 'Belum ada panduan bantuan yang ditambahkan.'}
             </Text>
           </View>
         ) : (
