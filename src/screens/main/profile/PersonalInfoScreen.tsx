@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlert from '../../../components/CustomAlert';
 import api from '../../../config/api';
 
-// ⚡ FIX 1: Komponen InputField dipindah ke LUAR agar tidak re-render & hilang fokus saat mengetik
+// Komponen InputField dipindah ke LUAR agar tidak re-render & hilang fokus saat mengetik
 const InputField = ({ label, value, onChangeText, icon, keyboardType = 'default', isLast = false, editable = true }: any) => (
   <View className={`py-3 ${!isLast ? 'border-b border-gray-50' : ''}`}>
     <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">{label}</Text>
@@ -32,6 +32,13 @@ export default function PersonalInfoScreen({ navigation }: any) {
   const [address, setAddress] = useState('');
   const [birthDate, setBirthDate] = useState('');
   
+  // State baru untuk mengecek instansi pengguna saat ini
+  const [instansi, setInstansi] = useState('');
+  
+  // State baru untuk fitur Verifikasi Mandiri
+  const [kodeVerify, setKodeVerify] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  
   const [isScreenLoading, setIsScreenLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
@@ -51,11 +58,54 @@ export default function PersonalInfoScreen({ navigation }: any) {
         setPhone(user.phone || ''); 
         setAddress(user.alamat || ''); 
         setBirthDate(user.tempat_lahir || ''); 
+        setInstansi(user.instansi || ''); // Menyimpan nama instansi saat ini
       }
     } catch (error) {
       console.log('Gagal menarik data profil lokal', error);
     } finally {
       setIsScreenLoading(false);
+    }
+  };
+
+  // Fungsi khusus untuk melakukan verifikasi kode rahasia instansi
+  const handleVerifyInstitution = async () => {
+    if (!kodeVerify) return;
+    setIsVerifying(true);
+    try {
+      const response = await api.post('/profile/verify-institution', {
+        kode_rahasia: kodeVerify
+      });
+      
+      if (response.data.status === 'success') {
+        const updatedUser = response.data.data;
+        
+        // Memperbarui data memori lokal agar tampilan di Beranda & Profil ikut berubah
+        const userDataString = await AsyncStorage.getItem('user');
+        if (userDataString) {
+          let user = JSON.parse(userDataString);
+          user.instansi = updatedUser.instansi;
+          await AsyncStorage.setItem('user', JSON.stringify(user));
+        }
+
+        setInstansi(updatedUser.instansi); // Menyembunyikan form verifikasi
+        setKodeVerify('');
+        
+        setAlertConfig({
+          type: 'success',
+          title: 'Verifikasi Sukses',
+          message: `Akun Anda sekarang resmi terhubung dengan ${updatedUser.instansi}.`
+        });
+        setAlertVisible(true);
+      }
+    } catch (error: any) {
+      setAlertConfig({
+        type: 'error',
+        title: 'Verifikasi Gagal',
+        message: error.response?.data?.message || 'Kode rahasia tidak valid atau tidak terdaftar.'
+      });
+      setAlertVisible(true);
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -76,10 +126,8 @@ export default function PersonalInfoScreen({ navigation }: any) {
         tempat_lahir: birthDate 
       };
       
-      // Kirim ke Laravel
       const response = await api.post('/profile/update', payload);
 
-      // Update data di memori lokal HP
       const userDataString = await AsyncStorage.getItem('user');
       if (userDataString) {
         let user = JSON.parse(userDataString);
@@ -95,11 +143,7 @@ export default function PersonalInfoScreen({ navigation }: any) {
       setAlertVisible(true);
 
     } catch (error: any) {
-      console.log('Error API Profile:', error.response?.data || error);
-
-      // ⚡ FIX 2: Menangkap pesan error ASLI dari Laravel
       const errorMessage = error.response?.data?.message || 'Gagal menghubungi server. Pastikan API berjalan normal.';
-
       setAlertConfig({ type: 'error', title: 'Gagal Menyimpan', message: errorMessage });
       setAlertVisible(true);
     } finally {
@@ -153,6 +197,36 @@ export default function PersonalInfoScreen({ navigation }: any) {
             </View>
           </View>
 
+          {/* KOTAK VERIFIKASI MANDIRI - Hanya muncul jika belum ada instansi atau masih faskes terdaftar */}
+          {(!instansi || instansi.toUpperCase().includes('FASKES')) && (
+            <View className="bg-sky-50 p-5 rounded-2xl border border-sky-100 mb-8 shadow-sm">
+              <View className="flex-row items-center mb-2">
+                <Ionicons name="shield-checkmark" size={20} color="#0EA5E9" style={{ marginRight: 8 }} />
+                <Text className="text-sky-900 font-bold text-base">Verifikasi Instansi</Text>
+              </View>
+              <Text className="text-sky-700 text-xs mb-4 leading-relaxed">
+                Akun Anda belum terikat ke sekolah manapun. Masukkan kode rahasia sekolah untuk mensinkronkan jadwal distribusi makanan Anda.
+              </Text>
+              <View className="flex-row items-center space-x-2">
+                <TextInput
+                  className="flex-1 bg-white border border-sky-200 rounded-xl px-4 py-3 text-gray-900 uppercase font-bold tracking-widest mr-2"
+                  placeholder="KODE SEKOLAH"
+                  placeholderTextColor="#94A3B8"
+                  value={kodeVerify}
+                  onChangeText={setKodeVerify}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity 
+                  onPress={handleVerifyInstitution}
+                  disabled={isVerifying || !kodeVerify}
+                  className={`px-5 py-3 rounded-xl justify-center items-center ${isVerifying || !kodeVerify ? 'bg-sky-300' : 'bg-primary active:bg-sky-600'}`}
+                >
+                  {isVerifying ? <ActivityIndicator color="white" size="small" /> : <Text className="text-white font-bold">Validasi</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           <Text className="text-sm font-bold text-gray-900 mb-3 ml-2 uppercase tracking-wider">Data Utama</Text>
           <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
             <InputField label="Nama Lengkap" value={name} onChangeText={setName} icon="person-outline" />
@@ -190,6 +264,7 @@ export default function PersonalInfoScreen({ navigation }: any) {
         onClose={() => setAlertVisible(false)}
         onConfirm={() => {
           setAlertVisible(false);
+          // Jika sukses menyimpan profil ATAU sukses verifikasi, kembali ke layar sebelumnya (Profil)
           if (alertConfig.type === 'success') {
             navigation.goBack();
           }
