@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Animated, Image, Modal, Switc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native'; // ⚡ RADAR REFRESH HALAMAN
+import { useFocusEffect } from '@react-navigation/native';
 import BottomNavbar from '../../components/BottomNavbar';
 
 export default function ProfileScreen({ navigation }: any) {
@@ -11,13 +11,11 @@ export default function ProfileScreen({ navigation }: any) {
   const lastOffsetY = useRef(0);
   const isNavbarVisible = useRef(true);
 
-  // ⚡ STATE UNTUK MENYIMPAN DATA DINAMIS DARI LOKAL MEMORI
   const [userData, setUserData] = useState({
     name: 'Memuat Data...',
     kategori: '...'
   });
 
-  // ⚡ USE FOCUS EFFECT: Menarik data terbaru setiap kali halaman Profil dibuka
   useFocusEffect(
     useCallback(() => {
       const loadUserData = async () => {
@@ -25,14 +23,19 @@ export default function ProfileScreen({ navigation }: any) {
           const userString = await AsyncStorage.getItem('user');
           if (userString) {
             const user = JSON.parse(userString);
+            
+            // Menggabungkan identitas kategori dengan nama instansi resmi
+            const labelKategori = user.instansi 
+                ? `${user.kategori} ${user.instansi}` 
+                : (user.kategori ? `${user.kategori} NutriVue` : 'Pengguna Umum');
+
             setUserData({
               name: user.name || 'Pengguna NutriVue',
-              // Anda bisa menyesuaikan ini. Jika kategori Siswa, bisa ditambah nama sekolahnya.
-              kategori: user.kategori ? `${user.kategori} NutriVue` : 'Siswa SMKS PAB 2 Helvetia',
+              kategori: labelKategori,
             });
           }
         } catch (error) {
-          console.log('Gagal memuat data profil:', error);
+          console.log('Gagal memuat data profil', error);
         }
       };
 
@@ -84,7 +87,7 @@ export default function ProfileScreen({ navigation }: any) {
       
     } catch (e) {
       console.log('Kegagalan terminasi sesi pengguna', e);
-      alert('Gagal Logout. Silakan coba lagi.');
+      alert('Gagal mengeluarkan sesi silakan coba lagi');
     }
   };
 
@@ -143,7 +146,6 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* ⚡ MENAMPILKAN NAMA DINAMIS */}
           <Text className="text-2xl font-bold text-gray-900 mb-1">{userData.name}</Text>
           <Text className="text-gray-500 text-sm font-medium mb-4">{userData.kategori}</Text>
           

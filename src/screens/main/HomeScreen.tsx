@@ -36,7 +36,6 @@ export default function HomeScreen({ navigation }: any) {
   const lastOffsetY = useRef(0);
 
   useEffect(() => {
-    // 1. Set Sapaan Waktu
     const currentHour = new Date().getHours();
     if (currentHour >= 4 && currentHour < 11) {
       setGreeting('Selamat Pagi,');
@@ -48,53 +47,50 @@ export default function HomeScreen({ navigation }: any) {
       setGreeting('Selamat Malam,');
     }
 
-    // 2. Tarik Data User dari Storage
     fetchUserData();
-    
-    // 3. Tarik Data Menu dari API
     fetchTodayMenu();
   }, []);
 
   const fetchUserData = async () => {
     try {
-      // Ambil data user yang disimpan saat Login
       const userDataString = await AsyncStorage.getItem('user');
       
       if (userDataString) {
         const user = JSON.parse(userDataString);
         
-        // 1. Set Nama (Ambil nama depan saja agar rapi di UI)
         const firstName = user.name.split(' ')[0];
         setUserName(firstName);
 
-        // 2. Set Kategori & Format Teks (contoh: "ibu_hamil" jadi "IBU HAMIL")
         const formattedKategori = user.kategori ? user.kategori.replace('_', ' ').toUpperCase() : 'PENGGUNA';
         setKategori(formattedKategori);
 
-        // 3. Set Lokasi Cerdas (Karena belum ada kolom instansi di DB)
-        if (user.kategori === 'siswa') {
-          setLokasi('SMKS PAB 2 HELVETIA');
-        } else if (user.kategori === 'ibu_hamil' || user.kategori === 'ibu_balita') {
-          setLokasi('POSYANDU MITRA');
-        } else {
-          setLokasi('FASKES TERDAFTAR');
-        }
+        // Menampilkan nama instansi asli dari basis data
+        setLokasi(user.instansi ? user.instansi.toUpperCase() : 'FASKES TERDAFTAR');
       }
     } catch (error) {
-      console.log('Gagal mengambil data user dari storage:', error);
+      console.log('Gagal mengambil data pengguna dari penyimpanan lokal', error);
     }
   };
 
+  // Menggunakan rute jadwal cerdas agar selaras dengan layar jadwal
   const fetchTodayMenu = async () => {
     try {
-      const response = await api.get('/meal/today-menu');
-      if (response.data.status === 'success' && response.data.data) {
+      const response = await api.get('/meal/schedule');
+      
+      if (response.data.status === 'success' && response.data.data && response.data.data['Hari Ini']) {
+        const menuHariIni = response.data.data['Hari Ini'];
+        
+        const dataProtein = menuHariIni.macros.find((m: any) => m.name === 'Protein');
+        const dataLemak = menuHariIni.macros.find((m: any) => m.name === 'Lemak');
+        
         setNutrition({
-          kalori: response.data.data.kalori,
-          protein: response.data.data.protein,
-          lemak: response.data.data.lemak,
-          namaMenu: response.data.data.nama_menu
+          kalori: menuHariIni.calories,
+          protein: dataProtein ? dataProtein.population : 0,
+          lemak: dataLemak ? dataLemak.population : 0,
+          namaMenu: menuHariIni.title
         });
+      } else {
+        setNutrition({ kalori: 0, protein: 0, lemak: 0, namaMenu: 'Belum Tersedia' });
       }
     } catch (error) {
       console.log('Gagal melakukan sinkronisasi data nutrisi', error);
@@ -121,7 +117,7 @@ export default function HomeScreen({ navigation }: any) {
         setQrModalVisible(true);
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Kegagalan sistem jaringan. Periksa konektivitas Anda.';
+      const errorMessage = error.response?.data?.message || 'Kegagalan sistem jaringan konektivitas memburuk';
       setAlertConfig({ type: 'warning', title: 'Akses Terbatas', message: errorMessage });
       setAlertVisible(true);
     } finally {
