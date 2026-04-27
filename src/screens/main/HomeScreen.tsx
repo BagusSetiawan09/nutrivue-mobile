@@ -178,7 +178,11 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           </View>
           
-          <TouchableOpacity className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 relative">
+          {/* ⚡ TOMBOL LONCENG DIHIDUPKAN MENGARAH KE NOTIFICATION SCREEN */}
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Notification')} 
+            className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 relative active:bg-gray-50"
+          >
             <Ionicons name="notifications-outline" size={24} color="#111827" />
             <View className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
           </TouchableOpacity>
