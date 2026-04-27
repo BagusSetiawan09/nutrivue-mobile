@@ -24,6 +24,9 @@ export default function HomeScreen({ navigation }: any) {
 
   const [nutrition, setNutrition] = useState({ kalori: 0, protein: 0, lemak: 0, namaMenu: 'Memuat...' });
   const [greeting, setGreeting] = useState('Selamat Datang,');
+  
+  // PENAMBAHAN STATE KUNCI: Untuk melacak apakah menu hari ini benar-benar ada
+  const [isMenuAvailable, setIsMenuAvailable] = useState(false);
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{
@@ -64,7 +67,6 @@ export default function HomeScreen({ navigation }: any) {
         const formattedKategori = user.kategori ? user.kategori.replace('_', ' ').toUpperCase() : 'PENGGUNA';
         setKategori(formattedKategori);
 
-        // Menampilkan nama instansi asli dari basis data
         setLokasi(user.instansi ? user.instansi.toUpperCase() : 'FASKES TERDAFTAR');
       }
     } catch (error) {
@@ -72,7 +74,6 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  // Menggunakan rute jadwal cerdas agar selaras dengan layar jadwal
   const fetchTodayMenu = async () => {
     try {
       const response = await api.get('/meal/schedule');
@@ -89,11 +90,19 @@ export default function HomeScreen({ navigation }: any) {
           lemak: dataLemak ? dataLemak.population : 0,
           namaMenu: menuHariIni.title
         });
+        
+        // Tandai bahwa menu tersedia
+        setIsMenuAvailable(true);
+        
       } else {
         setNutrition({ kalori: 0, protein: 0, lemak: 0, namaMenu: 'Belum Tersedia' });
+        
+        // Tandai bahwa menu KOSONG
+        setIsMenuAvailable(false);
       }
     } catch (error) {
       console.log('Gagal melakukan sinkronisasi data nutrisi', error);
+      setIsMenuAvailable(false);
     }
   };
 
@@ -109,6 +118,17 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const handleGenerateQR = async () => {
+    // LOGIKA PENGUNCIAN: Cegah request ke server jika menu tidak ada
+    if (!isMenuAvailable) {
+      setAlertConfig({ 
+        type: 'info', 
+        title: 'Jadwal Kosong', 
+        message: 'Menu gizi untuk hari ini belum tersedia. Silakan cek kembali jadwal untuk besok atau lusa di menu Jadwal Makan.' 
+      });
+      setAlertVisible(true);
+      return; // Hentikan fungsi di sini
+    }
+
     setIsLoadingQr(true);
     try {
       const response = await api.post('/meal/generate-qr');
@@ -164,14 +184,17 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <View className="bg-primary p-6 rounded-2xl shadow-xl shadow-sky-200 mb-8 overflow-hidden">
+        {/* KOTAK UTAMA: Mengubah warna menjadi abu-abu jika menu tidak tersedia */}
+        <View className={`${isMenuAvailable ? 'bg-primary shadow-sky-200' : 'bg-gray-400 shadow-gray-200'} p-6 rounded-2xl shadow-xl mb-8 overflow-hidden`}>
           <View className="flex-row justify-between items-center">
             <View className="flex-1 pr-4">
-              <Text className="text-sky-100 text-sm font-medium mb-1">Menu Hari Ini: {nutrition.namaMenu}</Text>
-              <Text className="text-white text-xl font-bold leading-tight">Jatah Makan Bergizi Anda Tersedia</Text>
+              <Text className={`${isMenuAvailable ? 'text-sky-100' : 'text-gray-200'} text-sm font-medium mb-1`}>Menu Hari Ini: {nutrition.namaMenu}</Text>
+              <Text className="text-white text-xl font-bold leading-tight">
+                {isMenuAvailable ? 'Jatah Makan Bergizi Anda Tersedia' : 'Belum Ada Jadwal Distribusi Hari Ini'}
+              </Text>
             </View>
             <View className="bg-white/20 p-4 rounded-2xl border border-white/30">
-              <Ionicons name="qr-code" size={32} color="white" />
+              <Ionicons name={isMenuAvailable ? "qr-code" : "close-circle-outline"} size={32} color="white" />
             </View>
           </View>
           
@@ -181,9 +204,11 @@ export default function HomeScreen({ navigation }: any) {
             className={`bg-white mt-6 py-4 rounded-xl items-center shadow-sm ${isLoadingQr ? 'opacity-80' : 'active:bg-gray-50'}`}
           >
             {isLoadingQr ? (
-              <ActivityIndicator color="#0EA5E9" size="small" />
+              <ActivityIndicator color={isMenuAvailable ? "#0EA5E9" : "#9CA3AF"} size="small" />
             ) : (
-              <Text className="text-primary font-bold">Tampilkan Kode Pengambilan</Text>
+              <Text className={`font-bold ${isMenuAvailable ? 'text-primary' : 'text-gray-500'}`}>
+                {isMenuAvailable ? 'Tampilkan Kode Pengambilan' : 'Jadwal Tidak Tersedia'}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
