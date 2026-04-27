@@ -41,10 +41,13 @@ export default function HelpCenterScreen({ navigation }: any) {
   };
 
   /**
-   *  FITUR AKTIF 1: Filter pencarian pintar menggunakan data dari API
+   * FITUR AKTIF 1: Filter pencarian pintar & Pembatasan Tampilan
    */
   const filteredFaqs = useMemo(() => {
-    if (!searchQuery.trim()) return faqs;
+    if (!searchQuery.trim()) {
+      return faqs.slice(0, 5); 
+    }
+    
     const lowerCaseQuery = searchQuery.toLowerCase();
     return faqs.filter(
       (faq) => 
