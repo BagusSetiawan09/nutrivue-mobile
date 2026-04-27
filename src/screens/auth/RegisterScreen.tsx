@@ -11,7 +11,6 @@ import CustomAlert from '../../components/CustomAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function RegisterScreen({ navigation }: any) {
-  // ... (State variables letakkan sama persis seperti kode Anda sebelumnya)
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +18,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [kategori, setKategori] = useState('');
+  const [kodeInstansi, setKodeInstansi] = useState(''); // Variabel kontrol kode instansi
   const [tempatLahir, setTempatLahir] = useState('');
   const [alamat, setAlamat] = useState('');
   const [email, setEmail] = useState('');
@@ -81,12 +81,16 @@ export default function RegisterScreen({ navigation }: any) {
   const handleSaveDate = () => { setTanggalLahirLabel(`${selectedDay} ${selectedMonth} ${selectedYear}`); togglePicker(false); };
 
   const isPasswordMatch = password === confirmPassword && password.length >= 8;
-  const isFormValid = isPasswordMatch && email.length > 0 && emailError === '' && kategori !== '' && tanggalLahirLabel !== '';
+  
+  // Penambahan validasi: Jika kategori siswa dipilih, kode instansi wajib diisi
+  const isFormValid = isPasswordMatch && email.length > 0 && emailError === '' && kategori !== '' && tanggalLahirLabel !== '' && (kategori === 'siswa' ? kodeInstansi.trim().length > 0 : true);
 
   const handleRegister = async () => {
     setIsLoading(true); 
     try {
-      const payload = { name, email, password, kategori, tempat_lahir: tempatLahir, tanggal_lahir: tanggalLahirLabel, alamat, phone };
+      const payload = { 
+        name, email, password, kategori, tempat_lahir: tempatLahir, tanggal_lahir: tanggalLahirLabel, alamat, phone, kode_instansi: kodeInstansi 
+      };
       const response = await api.post('/register', payload);
       if (response.data.status === 'success') {
         setAlertConfig({
@@ -105,12 +109,10 @@ export default function RegisterScreen({ navigation }: any) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       
-      {/* ⚡ JURUS PAMUNGKAS ANDROID */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         
         <ScrollView 
           showsVerticalScrollIndicator={false} 
-          /* ⚡ JURUS PAMUNGKAS: paddingBottom 150 agar area terbawah (tombol) aman di-scroll ke atas */
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 150 }} 
           keyboardShouldPersistTaps="handled"
           bounces={false}
@@ -131,13 +133,39 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text className="text-sm font-semibold text-gray-700 mb-3 ml-1">Pilih Kategori</Text>
                 <View className="flex-row justify-between">
                   {kategoriOptions.map((item) => (
-                    <TouchableOpacity key={item.value} onPress={() => setKategori(item.value)} className={`flex-1 mx-1 p-3 rounded-2xl items-center border ${kategori === item.value ? 'bg-primary border-primary' : 'bg-white border-gray-100'} shadow-sm`}>
+                    <TouchableOpacity 
+                      key={item.value} 
+                      onPress={() => {
+                        setKategori(item.value);
+                        if (item.value !== 'siswa') setKodeInstansi('');
+                      }} 
+                      className={`flex-1 mx-1 p-3 rounded-2xl items-center border ${kategori === item.value ? 'bg-primary border-primary' : 'bg-white border-gray-100'} shadow-sm`}
+                    >
                       <Ionicons name={item.icon as any} size={20} color={kategori === item.value ? '#FFFFFF' : '#9CA3AF'} />
                       <Text className={`text-[10px] mt-1 font-bold ${kategori === item.value ? 'text-white' : 'text-gray-500'}`}>{item.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
+
+              {/* Kolom Isian Dinamis Kode Instansi */}
+              {kategori === 'siswa' && (
+                <View>
+                  <Text className="text-sm font-medium text-sky-700 mb-2 ml-1">Kode Rahasia Sekolah</Text>
+                  <View className="relative justify-center">
+                    <TextInput 
+                      className="bg-sky-50 border border-sky-200 rounded-2xl px-5 py-4 text-base text-gray-900 shadow-sm uppercase" 
+                      placeholder="Masukkan kode validasi sekolah" 
+                      placeholderTextColor="#94A3B8"
+                      value={kodeInstansi} 
+                      onChangeText={setKodeInstansi} 
+                      autoCapitalize="characters"
+                    />
+                    <Ionicons name="shield-checkmark" size={20} color="#0EA5E9" style={{ position: 'absolute', right: 16 }} />
+                  </View>
+                  <Text className="text-gray-400 text-[10px] mt-2 ml-1 font-medium">Minta kode ini kepada administrator sekolah Anda.</Text>
+                </View>
+              )}
 
               <View>
                 <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">Nama Lengkap</Text>
@@ -211,7 +239,6 @@ export default function RegisterScreen({ navigation }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Modal Picker Tanggal Lahir (Disembunyikan untuk hemat baris, gunakan kode Modal Anda yang asli) */}
       <Modal visible={visible} transparent animationType="none">
         <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
           <Animated.View style={{ opacity }} className="flex-1 bg-black/50">
