@@ -24,6 +24,7 @@ import DigitalIdScreen from './src/screens/main/profile/DigitalIdScreen';
 import SecurityScreen from './src/screens/main/profile/SecurityScreen';
 import HelpCenterScreen from './src/screens/main/profile/HelpCenterScreen';
 import GlobalUpdater from './src/components/GlobalUpdater';
+import NotificationScreen from './src/screens/main/NotificationScreen';
 
 // Mengimpor layar pelindung aplikasi
 import PinUnlockScreen from './src/screens/auth/PinUnlockScreen';
@@ -119,6 +120,7 @@ export default function App() {
           <Stack.Screen name="DigitalId" component={DigitalIdScreen} />
           <Stack.Screen name="Security" component={SecurityScreen} />
           <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
+          <Stack.Screen name="Notification" component={NotificationScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="auto" />
