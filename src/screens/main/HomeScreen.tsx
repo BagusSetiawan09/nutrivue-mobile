@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Dimensions, Animated, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
+import { useFocusEffect } from '@react-navigation/native'; // ⚡ IMPORT RADAR FOKUS
 
 import BottomNavbar from '../../components/BottomNavbar';
 import api from '../../config/api';
@@ -25,8 +26,10 @@ export default function HomeScreen({ navigation }: any) {
   const [nutrition, setNutrition] = useState({ kalori: 0, protein: 0, lemak: 0, namaMenu: 'Memuat...' });
   const [greeting, setGreeting] = useState('Selamat Datang,');
   
-  // PENAMBAHAN STATE KUNCI: Untuk melacak apakah menu hari ini benar-benar ada
   const [isMenuAvailable, setIsMenuAvailable] = useState(false);
+  
+  // ⚡ STATE KUNCI: Untuk menyimpan jumlah notifikasi yang belum dibaca
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{
@@ -37,6 +40,13 @@ export default function HomeScreen({ navigation }: any) {
 
   const navTranslateY = useRef(new Animated.Value(0)).current;
   const lastOffsetY = useRef(0);
+
+  // ⚡ RADAR FOKUS: Akan menarik data jumlah notifikasi setiap kali layar Beranda aktif
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+    }, [])
+  );
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -53,6 +63,18 @@ export default function HomeScreen({ navigation }: any) {
     fetchUserData();
     fetchTodayMenu();
   }, []);
+
+  // ⚡ FUNGSI PENARIKAN JUMLAH NOTIFIKASI
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await api.get('/notifications');
+      if (response.data.status === 'success') {
+        setUnreadCount(response.data.unread_count);
+      }
+    } catch (error) {
+      console.log('Gagal menarik jumlah notifikasi', error);
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -91,13 +113,10 @@ export default function HomeScreen({ navigation }: any) {
           namaMenu: menuHariIni.title
         });
         
-        // Tandai bahwa menu tersedia
         setIsMenuAvailable(true);
         
       } else {
         setNutrition({ kalori: 0, protein: 0, lemak: 0, namaMenu: 'Belum Tersedia' });
-        
-        // Tandai bahwa menu KOSONG
         setIsMenuAvailable(false);
       }
     } catch (error) {
@@ -118,7 +137,6 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const handleGenerateQR = async () => {
-    // LOGIKA PENGUNCIAN: Cegah request ke server jika menu tidak ada
     if (!isMenuAvailable) {
       setAlertConfig({ 
         type: 'info', 
@@ -126,7 +144,7 @@ export default function HomeScreen({ navigation }: any) {
         message: 'Menu gizi untuk hari ini belum tersedia. Silakan cek kembali jadwal untuk besok atau lusa di menu Jadwal Makan.' 
       });
       setAlertVisible(true);
-      return; // Hentikan fungsi di sini
+      return; 
     }
 
     setIsLoadingQr(true);
@@ -178,17 +196,24 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           </View>
           
-          {/* ⚡ TOMBOL LONCENG DIHIDUPKAN MENGARAH KE NOTIFICATION SCREEN */}
           <TouchableOpacity 
             onPress={() => navigation.navigate('Notification')} 
             className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 relative active:bg-gray-50"
           >
             <Ionicons name="notifications-outline" size={24} color="#111827" />
-            <View className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+            
+            {/* ⚡ LOGIKA LENCANA (BADGE) DINAMIS */}
+            {unreadCount > 0 && (
+              <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-[20px] items-center justify-center border-2 border-white px-1 shadow-sm z-10">
+                <Text className="text-white text-[10px] font-black">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+
           </TouchableOpacity>
         </View>
 
-        {/* KOTAK UTAMA: Mengubah warna menjadi abu-abu jika menu tidak tersedia */}
         <View className={`${isMenuAvailable ? 'bg-primary shadow-sky-200' : 'bg-gray-400 shadow-gray-200'} p-6 rounded-2xl shadow-xl mb-8 overflow-hidden`}>
           <View className="flex-row justify-between items-center">
             <View className="flex-1 pr-4">
