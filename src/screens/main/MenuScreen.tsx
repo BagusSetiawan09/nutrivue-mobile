@@ -96,6 +96,11 @@ export default function MenuScreen({ navigation }: any) {
 
   const currentMenu = (menuData && typeof menuData === 'object') ? menuData[selectedDay] : null;
 
+  // 🚨 PENJINAK BOM PIECHART (Cek Total Gizi)
+  const totalMacros = currentMenu?.macros 
+    ? currentMenu.macros.reduce((sum: number, item: any) => sum + (Number(item.population) || 0), 0) 
+    : 0;
+
   const handleMacroClick = (macro: any) => {
     setSelectedMacro(macro);
     setModalVisible(true);
@@ -172,20 +177,28 @@ export default function MenuScreen({ navigation }: any) {
                 
                 {currentMenu.macros && currentMenu.macros.length > 0 ? (
                   <>
-                    <View className="w-full items-center justify-center">
-                      <PieChart
-                        data={currentMenu.macros}
-                        width={chartWidth} 
-                        height={160}
-                        chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
-                        accessor={"population"}
-                        backgroundColor={"transparent"}
-                        paddingLeft={"0"}
-                        center={[centerOffset, 0]} 
-                        absolute 
-                        hasLegend={false}
-                      />
-                    </View>
+                    {/* 🚨 TAMPILKAN GRAFIK HANYA JIKA TOTAL GIZI > 0 */}
+                    {totalMacros > 0 ? (
+                      <View className="w-full items-center justify-center">
+                        <PieChart
+                          data={currentMenu.macros}
+                          width={chartWidth} 
+                          height={160}
+                          chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
+                          accessor={"population"}
+                          backgroundColor={"transparent"}
+                          paddingLeft={"0"}
+                          center={[centerOffset, 0]} 
+                          absolute 
+                          hasLegend={false}
+                        />
+                      </View>
+                    ) : (
+                      <View className="py-6 items-center justify-center">
+                        <Ionicons name="pie-chart-outline" size={48} color="#E5E7EB" />
+                        <Text className="text-gray-400 mt-2 text-[11px] font-medium text-center">Data grafik belum lengkap (Total 0g)</Text>
+                      </View>
+                    )}
 
                     <View className="flex-row justify-center flex-wrap w-full mt-4 gap-2">
                       {currentMenu.macros.map((item: any, index: number) => (
