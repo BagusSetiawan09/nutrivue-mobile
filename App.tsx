@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -25,8 +25,6 @@ import SecurityScreen from './src/screens/main/profile/SecurityScreen';
 import HelpCenterScreen from './src/screens/main/profile/HelpCenterScreen';
 import GlobalUpdater from './src/components/GlobalUpdater';
 import NotificationScreen from './src/screens/main/NotificationScreen';
-
-// Mengimpor layar pelindung aplikasi
 import PinUnlockScreen from './src/screens/auth/PinUnlockScreen';
 
 if (!__DEV__) {
@@ -42,6 +40,9 @@ if (!__DEV__) {
 }
 
 const Stack = createNativeStackNavigator();
+
+// Membuat Ref Navigasi untuk memungkinkan navigasi dari luar komponen navigasi (misalnya dari interseptor API)
+export const navigationRef = createNavigationContainerRef();
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +87,21 @@ export default function App() {
     };
 
     checkLoginStatus();
+
+    // Mendaftarkan listener untuk event FORCE_LOGOUT yang dipicu oleh interseptor respon API saat token kadaluarsa
+    const logoutListener = DeviceEventEmitter.addListener('FORCE_LOGOUT', () => {
+      if (navigationRef.isReady()) {
+        // Reset stack navigasi dan arahkan ke layar Login untuk memastikan pengguna tidak bisa kembali ke layar sebelumnya
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }
+    });
+
+    return () => {
+      logoutListener.remove(); // Bersihkan listener saat komponen di-unmount untuk mencegah memory leak
+    };
   }, []);
 
   if (isLoading) {
@@ -98,7 +114,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <GlobalUpdater />
         <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
           <Stack.Screen name="Login" component={LoginScreen} />
