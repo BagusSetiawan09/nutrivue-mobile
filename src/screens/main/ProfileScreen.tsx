@@ -11,7 +11,7 @@ export default function ProfileScreen({ navigation }: any) {
   const lastOffsetY = useRef(0);
   const isNavbarVisible = useRef(true);
 
-  const [userData, setUserData] = useState({
+  const [userData, setUserData] = useState<any>({
     name: 'Memuat Data...',
     kategori: '...',
     avatar: null
@@ -109,9 +109,26 @@ export default function ProfileScreen({ navigation }: any) {
     </TouchableOpacity>
   );
 
-  // Tentukan gambar sumber
+  // Logika penentuan URL gambar profil dengan fallback dan penyesuaian otomatis untuk berbagai format URL yang mungkin dikembalikan oleh backend
   const defaultImage = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=500&auto=format&fit=crop';
-  const profileImageSource = userData.avatar ? { uri: userData.avatar } : { uri: defaultImage };
+  let finalAvatarUrl = defaultImage;
+
+  if (userData.avatar) {
+    // 1. Jika backend mengembalikan URL yang mengandung "localhost" atau "
+    if (userData.avatar.includes('localhost') || userData.avatar.includes('127.0.0.1')) {
+      finalAvatarUrl = userData.avatar.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage/, 'https://nutrivueapp.com/storage');
+    } 
+    // 2. Jika backend mengembalikan path relatif tanpa domain (misalnya "avatars/user123.jpg")
+    else if (!userData.avatar.startsWith('http')) {
+      finalAvatarUrl = `https://nutrivueapp.com/storage/${userData.avatar}`;
+    } 
+    // 3. Jika URL sudah sempurna
+    else {
+      finalAvatarUrl = userData.avatar;
+    }
+  }
+
+  const profileImageSource = { uri: finalAvatarUrl };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -142,7 +159,6 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <View className="relative mb-4 mt-2">
-            {/* 📸 Pemasangan variabel dinamis sumber foto profil */}
             <Image 
               source={profileImageSource} 
               className="w-24 h-24 rounded-full border-4 border-sky-50"
