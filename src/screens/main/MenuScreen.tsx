@@ -16,7 +16,6 @@ export default function MenuScreen({ navigation }: any) {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   
-  // ⚡ STATE UNTUK DATA API REAL
   const [menuData, setMenuData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,7 +29,6 @@ export default function MenuScreen({ navigation }: any) {
   const lastOffsetY = useRef(0);
   const isNavbarVisible = useRef(true);
 
-  // ⚡ AMBIL DATA JADWAL SAAT HALAMAN DIBUKA
   useEffect(() => {
     fetchMenuSchedule();
   }, []);
@@ -38,15 +36,13 @@ export default function MenuScreen({ navigation }: any) {
   const fetchMenuSchedule = async () => {
     try {
       setIsLoading(true);
-      // Memanggil endpoint jadwal menu dari Laravel
       const response = await api.get('/meal/schedule');
       
       if (response.data.status === 'success') {
-        setMenuData(response.data.data);
+        setMenuData(response.data.data || {});
       }
     } catch (error) {
       console.log('Gagal menarik jadwal menu:', error);
-      // Fallback data kosong jika API belum siap
       setMenuData({});
     } finally {
       setIsLoading(false);
@@ -60,7 +56,6 @@ export default function MenuScreen({ navigation }: any) {
       return;
     }
     
-    // Logika kirim ulasan ke backend bisa ditambahkan di sini nantinya
     setAlertMessage('Terima kasih! Ulasan Anda telah berhasil dikirim ke server.');
     setAlertVisible(true);
     setRating(0);
@@ -99,8 +94,7 @@ export default function MenuScreen({ navigation }: any) {
 
   const days = ['Hari Ini', 'Besok', 'Lusa'];
 
-  // Data menu yang terpilih berdasarkan Tab
-  const currentMenu = menuData[selectedDay] || null;
+  const currentMenu = (menuData && typeof menuData === 'object') ? menuData[selectedDay] : null;
 
   const handleMacroClick = (macro: any) => {
     setSelectedMacro(macro);
@@ -143,7 +137,6 @@ export default function MenuScreen({ navigation }: any) {
           ))}
         </View>
 
-        {/* LOGIKA LOADING & DATA */}
         {isLoading ? (
           <View className="items-center justify-center py-20 bg-white rounded-[32px] border border-gray-100 shadow-sm">
             <ActivityIndicator size="large" color="#0EA5E9" />
@@ -152,12 +145,11 @@ export default function MenuScreen({ navigation }: any) {
         ) : !currentMenu ? (
           <View className="items-center justify-center py-20 bg-white rounded-[32px] border border-gray-100 shadow-sm border-dashed">
             <Ionicons name="calendar-outline" size={64} color="#D1D5DB" />
-            <Text className="text-gray-400 mt-4 font-medium">Jadwal menu untuk {selectedDay} belum tersedia</Text>
+            <Text className="text-gray-400 mt-4 font-medium text-center px-4">Jadwal menu untuk {selectedDay} belum tersedia</Text>
           </View>
         ) : (
           <View className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100 mb-8">
             <View className="h-56 w-full relative bg-gray-200">
-               {/* Gunakan gambar default jika tidak ada foto dari dashboard */}
                <Image 
                  source={{ uri: currentMenu.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop' }} 
                  className="w-full h-full"
@@ -218,8 +210,7 @@ export default function MenuScreen({ navigation }: any) {
           </View>
         )}
 
-        {/* MODUL UMPAN BALIK */}
-        <View className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
+        <View className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 mt-8">
           <Text className="text-lg font-bold text-gray-900 mb-2">Ulasan NutriVue</Text>
           <Text className="text-gray-400 text-xs mb-6">Penilaian Anda membantu kami meningkatkan standar kualitas penyajian hidangan.</Text>
 
@@ -254,7 +245,6 @@ export default function MenuScreen({ navigation }: any) {
 
       <BottomNavbar activeTab="Menu" navigation={navigation} translateY={navTranslateY} />
 
-      {/* Modal Edukasi Gizi */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center items-center px-6">
           {selectedMacro && (
