@@ -13,7 +13,8 @@ export default function ProfileScreen({ navigation }: any) {
 
   const [userData, setUserData] = useState({
     name: 'Memuat Data...',
-    kategori: '...'
+    kategori: '...',
+    avatar: null
   });
 
   useFocusEffect(
@@ -24,7 +25,6 @@ export default function ProfileScreen({ navigation }: any) {
           if (userString) {
             const user = JSON.parse(userString);
             
-            // Menggabungkan identitas kategori dengan nama instansi resmi
             const labelKategori = user.instansi 
                 ? `${user.kategori} ${user.instansi}` 
                 : (user.kategori ? `${user.kategori} NutriVue` : 'Pengguna Umum');
@@ -32,6 +32,7 @@ export default function ProfileScreen({ navigation }: any) {
             setUserData({
               name: user.name || 'Pengguna NutriVue',
               kategori: labelKategori,
+              avatar: user.avatar || null
             });
           }
         } catch (error) {
@@ -108,6 +109,10 @@ export default function ProfileScreen({ navigation }: any) {
     </TouchableOpacity>
   );
 
+  // Tentukan gambar sumber
+  const defaultImage = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=500&auto=format&fit=crop';
+  const profileImageSource = userData.avatar ? { uri: userData.avatar } : { uri: defaultImage };
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="px-6 pt-6 pb-2 flex-row justify-between items-center">
@@ -137,8 +142,9 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <View className="relative mb-4 mt-2">
+            {/* 📸 Pemasangan variabel dinamis sumber foto profil */}
             <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=500&auto=format&fit=crop' }} 
+              source={profileImageSource} 
               className="w-24 h-24 rounded-full border-4 border-sky-50"
             />
             <View className="absolute bottom-0 right-0 bg-emerald-500 w-6 h-6 rounded-full items-center justify-center border-2 border-white">
