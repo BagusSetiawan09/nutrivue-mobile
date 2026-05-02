@@ -1,10 +1,11 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Animated, Image, Modal, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Animated, Image, Modal, Switch, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import BottomNavbar from '../../components/BottomNavbar';
+import api from '../../config/api';
 
 export default function ProfileScreen({ navigation }: any) {
   const navTranslateY = useRef(new Animated.Value(0)).current;
@@ -17,8 +18,15 @@ export default function ProfileScreen({ navigation }: any) {
     avatar: null
   });
 
+  const [stats, setStats] = useState({
+    streak: 0,
+    total_taken: 0,
+    isLoading: true
+  });
+
   useFocusEffect(
     useCallback(() => {
+      // 1. Fungsi narik identitas user dari memori lokal
       const loadUserData = async () => {
         try {
           const userString = await AsyncStorage.getItem('user');
@@ -40,7 +48,25 @@ export default function ProfileScreen({ navigation }: any) {
         }
       };
 
+      // 2. FUNGSI BARU: Narik data statistik real-time dari server Laravel
+      const fetchUserStats = async () => {
+        try {
+          const response = await api.get('/meal/statistics');
+          if (response.data.status === 'success') {
+            setStats({
+              streak: response.data.data?.streak || 0,
+              total_taken: response.data.data?.total_taken || 0,
+              isLoading: false
+            });
+          }
+        } catch (error) {
+          console.log('Gagal menarik statistik dari server', error);
+          setStats(prev => ({ ...prev, isLoading: false })); // Matikan loading jika gagal
+        }
+      };
+
       loadUserData();
+      fetchUserStats(); // Eksekusi penarikan data statistik
     }, [])
   );
 
@@ -109,20 +135,16 @@ export default function ProfileScreen({ navigation }: any) {
     </TouchableOpacity>
   );
 
-  // Logika penentuan URL gambar profil dengan fallback dan penyesuaian otomatis untuk berbagai format URL yang mungkin dikembalikan oleh backend
   const defaultImage = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=500&auto=format&fit=crop';
   let finalAvatarUrl = defaultImage;
 
   if (userData.avatar) {
-    // 1. Jika backend mengembalikan URL yang mengandung "localhost" atau "
     if (userData.avatar.includes('localhost') || userData.avatar.includes('127.0.0.1')) {
       finalAvatarUrl = userData.avatar.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage/, 'https://nutrivueapp.com/storage');
     } 
-    // 2. Jika backend mengembalikan path relatif tanpa domain (misalnya "avatars/user123.jpg")
     else if (!userData.avatar.startsWith('http')) {
       finalAvatarUrl = `https://nutrivueapp.com/storage/${userData.avatar}`;
     } 
-    // 3. Jika URL sudah sempurna
     else {
       finalAvatarUrl = userData.avatar;
     }
@@ -182,7 +204,11 @@ export default function ProfileScreen({ navigation }: any) {
             <View className="w-10 h-10 bg-amber-50 rounded-full items-center justify-center mb-2">
               <Ionicons name="flame" size={20} color="#F59E0B" />
             </View>
-            <Text className="text-xl font-black text-gray-900">12 Hari</Text>
+            {stats.isLoading ? (
+              <ActivityIndicator color="#F59E0B" size="small" />
+            ) : (
+              <Text className="text-xl font-black text-gray-900">{stats.streak} Hari</Text>
+            )}
             <Text className="text-gray-400 text-[10px] font-bold uppercase mt-1">Beruntun</Text>
           </View>
           
@@ -190,7 +216,11 @@ export default function ProfileScreen({ navigation }: any) {
             <View className="w-10 h-10 bg-emerald-50 rounded-full items-center justify-center mb-2">
               <Ionicons name="restaurant" size={20} color="#10B981" />
             </View>
-            <Text className="text-xl font-black text-gray-900">45 Porsi</Text>
+             {stats.isLoading ? (
+              <ActivityIndicator color="#10B981" size="small" />
+            ) : (
+              <Text className="text-xl font-black text-gray-900">{stats.total_taken} Porsi</Text>
+            )}
             <Text className="text-gray-400 text-[10px] font-bold uppercase mt-1">Total Diambil</Text>
           </View>
         </View>
