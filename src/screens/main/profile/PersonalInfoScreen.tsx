@@ -3,10 +3,10 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, KeyboardAvo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import CustomAlert from '../../../components/CustomAlert';
 import api from '../../../config/api';
 
-// Komponen InputField dipindah ke LUAR agar tidak re-render & hilang fokus saat mengetik
 const InputField = ({ label, value, onChangeText, icon, keyboardType = 'default', isLast = false, editable = true }: any) => (
   <View className={`py-3 ${!isLast ? 'border-b border-gray-50' : ''}`}>
     <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">{label}</Text>
@@ -31,11 +31,12 @@ export default function PersonalInfoScreen({ navigation }: any) {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  
-  // State baru untuk mengecek instansi pengguna saat ini
   const [instansi, setInstansi] = useState('');
   
-  // State baru untuk fitur Verifikasi Mandiri
+  // 📸 STATE BARU UNTUK FOTO PROFIL
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<any>(null); // Menyimpan objek file untuk dikirim
+
   const [kodeVerify, setKodeVerify] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   
@@ -58,7 +59,9 @@ export default function PersonalInfoScreen({ navigation }: any) {
         setPhone(user.phone || ''); 
         setAddress(user.alamat || ''); 
         setBirthDate(user.tempat_lahir || ''); 
-        setInstansi(user.instansi || ''); // Menyimpan nama instansi saat ini
+        setInstansi(user.instansi || '');
+        // Set foto profil awal jika ada
+        setProfileImage(user.avatar || null);
       }
     } catch (error) {
       console.log('Gagal menarik data profil lokal', error);
@@ -67,19 +70,40 @@ export default function PersonalInfoScreen({ navigation }: any) {
     }
   };
 
-  // Fungsi khusus untuk melakukan verifikasi kode rahasia instansi
+  // 📸 FUNGSI MEMBUKA GALERI HP
+  const pickImage = async () => {
+    // Meminta izin akses galeri
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      setAlertConfig({ type: 'error', title: 'Izin Ditolak', message: 'Aplikasi membutuhkan akses ke galeri untuk mengubah foto profil.' });
+      setAlertVisible(true);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, // Izinkan pengguna melakukan crop
+      aspect: [1, 1], // Wajib rasio kotak 1:1 untuk profil
+      quality: 0.5, // Kompresi ukuran gambar (0-1) agar API tidak berat
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const selectedImage = result.assets[0];
+      setProfileImage(selectedImage.uri); // Untuk tampilan preview di layar
+      setImageFile(selectedImage); // Simpan objek untuk dikirim via FormData
+    }
+  };
+
   const handleVerifyInstitution = async () => {
     if (!kodeVerify) return;
     setIsVerifying(true);
     try {
-      const response = await api.post('/profile/verify-institution', {
-        kode_rahasia: kodeVerify
-      });
+      const response = await api.post('/profile/verify-institution', { kode_rahasia: kodeVerify });
       
       if (response.data.status === 'success') {
         const updatedUser = response.data.data;
         
-        // Memperbarui data memori lokal agar tampilan di Beranda & Profil ikut berubah
         const userDataString = await AsyncStorage.getItem('user');
         if (userDataString) {
           let user = JSON.parse(userDataString);
@@ -87,7 +111,7 @@ export default function PersonalInfoScreen({ navigation }: any) {
           await AsyncStorage.setItem('user', JSON.stringify(user));
         }
 
-        setInstansi(updatedUser.instansi); // Menyembunyikan form verifikasi
+        setInstansi(updatedUser.instansi); 
         setKodeVerify('');
         
         setAlertConfig({
@@ -101,7 +125,7 @@ export default function PersonalInfoScreen({ navigation }: any) {
       setAlertConfig({
         type: 'error',
         title: 'Verifikasi Gagal',
-        message: error.response?.data?.message || 'Kode rahasia tidak valid atau tidak terdaftar.'
+        message: error.response?.data?.message || 'Kode rahasia tidak valid.'
       });
       setAlertVisible(true);
     } finally {
@@ -118,32 +142,55 @@ export default function PersonalInfoScreen({ navigation }: any) {
 
     setIsLoading(true);
     try {
-      const payload = { 
-        name, 
-        email, 
-        phone, 
-        alamat: address, 
-        tempat_lahir: birthDate 
-      };
-      
-      const response = await api.post('/profile/update', payload);
+      // 🚀 MENGUBAH PAYLOAD MENJADI FORMDATA KARENA ADA FILE GAMBAR
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('email', email);
+      formData.append('phone', phone);
+      formData.append('alamat', address);
+      formData.append('tempat_lahir', birthDate);
 
+      // Jika pengguna memilih gambar baru, masukkan ke form
+      if (imageFile) {
+        // Mendapatkan ekstensi file secara dinamis
+        let uriParts = imageFile.uri.split('.');
+        let fileType = uriParts[uriParts.length - 1];
+
+        formData.append('avatar', {
+          uri: imageFile.uri,
+          name: `photo.${fileType}`,
+          type: `image/${fileType}`,
+        } as any);
+      }
+      
+      // Kirim via axios dengan header multipart
+      const response = await api.post('/profile/update', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Update data di penyimpanan lokal
       const userDataString = await AsyncStorage.getItem('user');
       if (userDataString) {
         let user = JSON.parse(userDataString);
-        user = { ...user, ...payload }; 
+        // Menggabungkan data lama dengan data baru (termasuk avatar URL dari server jika ada)
+        user = { ...user, name, email, phone, alamat: address, tempat_lahir: birthDate };
+        if (response.data.data?.avatar) {
+             user.avatar = response.data.data.avatar;
+        }
         await AsyncStorage.setItem('user', JSON.stringify(user));
       }
 
       setAlertConfig({ 
         type: 'success', 
         title: 'Pembaruan Berhasil', 
-        message: 'Informasi pribadi Anda telah berhasil diperbarui dan disinkronkan ke sistem.' 
+        message: 'Informasi pribadi dan foto profil telah berhasil diperbarui.' 
       });
       setAlertVisible(true);
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Gagal menghubungi server. Pastikan API berjalan normal.';
+      const errorMessage = error.response?.data?.message || 'Gagal menyimpan profil.';
       setAlertConfig({ type: 'error', title: 'Gagal Menyimpan', message: errorMessage });
       setAlertVisible(true);
     } finally {
@@ -158,6 +205,13 @@ export default function PersonalInfoScreen({ navigation }: any) {
       </View>
     );
   }
+
+  // Tentukan gambar default atau gambar yang dipilih/ada di database
+  const defaultImage = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=500&auto=format&fit=crop';
+  // Jika profileImage berbentuk URL server (http/https) atau URI lokal (file://), tampilkan.
+  const imageSource = profileImage 
+    ? { uri: profileImage.startsWith('http') ? profileImage : profileImage } 
+    : { uri: defaultImage };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -188,16 +242,19 @@ export default function PersonalInfoScreen({ navigation }: any) {
           <View className="items-center mb-8">
             <View className="relative shadow-sm">
               <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=500&auto=format&fit=crop' }} 
+                source={imageSource} 
                 className="w-28 h-28 rounded-full border-4 border-white"
               />
-              <TouchableOpacity className="absolute bottom-0 right-0 bg-primary w-9 h-9 rounded-full items-center justify-center border-4 border-gray-50 active:bg-sky-600">
+              {/* 📸 TOMBOL KLIK UNTUK BUKA GALERI */}
+              <TouchableOpacity 
+                onPress={pickImage}
+                className="absolute bottom-0 right-0 bg-primary w-9 h-9 rounded-full items-center justify-center border-4 border-gray-50 active:bg-sky-600"
+              >
                 <Ionicons name="camera" size={16} color="white" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* KOTAK VERIFIKASI MANDIRI - Hanya muncul jika belum ada instansi atau masih faskes terdaftar */}
           {(!instansi || instansi.toUpperCase().includes('FASKES')) && (
             <View className="bg-sky-50 p-5 rounded-2xl border border-sky-100 mb-8 shadow-sm">
               <View className="flex-row items-center mb-2">
@@ -264,7 +321,6 @@ export default function PersonalInfoScreen({ navigation }: any) {
         onClose={() => setAlertVisible(false)}
         onConfirm={() => {
           setAlertVisible(false);
-          // Jika sukses menyimpan profil ATAU sukses verifikasi, kembali ke layar sebelumnya (Profil)
           if (alertConfig.type === 'success') {
             navigation.goBack();
           }
